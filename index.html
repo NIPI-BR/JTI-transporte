@@ -515,8 +515,11 @@ textarea{resize:vertical;min-height:60px}
         <div id="cfg2" class="sp">
           <div class="card" style="border-color:var(--dng)">
             <div class="ctitle" style="color:var(--dngt)">Zona de risco</div>
-            <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Apaga todos os dados deste dispositivo. Esta ação não pode ser desfeita.</p>
-            <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="resetData()">Apagar dados locais</button>
+            <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Zerar os dados financeiros (lançamentos, contas, boletos, veículos, caixas e relatórios), <strong>mantendo os usuários</strong>. Sincroniza a limpeza com a nuvem para todos os aparelhos.</p>
+            <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt);margin-right:8px" onclick="zerarDadosFinanceiros()">Zerar dados financeiros (manter usuários)</button>
+            <div style="height:14px"></div>
+            <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Apagar <strong>tudo</strong> deste dispositivo e da nuvem, incluindo usuários. O sistema volta ao estado inicial (apenas Edson, Janaína e Auricélia).</p>
+            <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="resetData()">Apagar tudo (reset completo)</button>
           </div>
         </div>
       </div>
@@ -667,49 +670,11 @@ const SEED=[
   {user:'auricelia',name:'Auricélia',role:'dona',area:'diretoria',pin:'3456',access:[...ALLMODS]}
 ];
 
-/* frota de exemplo (depreciação linear) */
-const SEED_VEIC=[
-  {id:'v1',placa:'HJK-1234',modelo:'Scania R450',tipo:'Carreta',motorista:'Carlos Mendes',ano:'2019',status:'Ativo',valorCompra:380000,valorResidual:76000,vidaUtil:120,kmMes:9000,kmAtual:158000},
-  {id:'v2',placa:'ABX-9900',modelo:'Volvo FH 460',tipo:'Bitrem',motorista:'Marcos Pinto',ano:'2021',status:'Ativo',valorCompra:460000,valorResidual:92000,vidaUtil:120,kmMes:10500,kmAtual:87000},
-  {id:'v3',placa:'PLT-5678',modelo:'Mercedes Actros',tipo:'Truck',motorista:'João Ribeiro',ano:'2018',status:'Ativo',valorCompra:290000,valorResidual:58000,vidaUtil:120,kmMes:7500,kmAtual:194000},
-  {id:'v4',placa:'RTZ-2211',modelo:'MAN TGX 28',tipo:'Carreta',motorista:'Pedro Assis',ano:'2022',status:'Ativo',valorCompra:520000,valorResidual:104000,vidaUtil:120,kmMes:11000,kmAtual:62000}
-];
-/* lançamentos de frete/custo de exemplo, vinculados a placa */
-function seedFretes(){
-  const H=new Date(),d=(n)=>{const x=new Date(H);x.setDate(x.getDate()+n);return x.toISOString().split('T')[0];};
-  const by='Auricélia',byId='auricelia';
-  return [
-    {id:uid(),d:d(-27),desc:'Frete SP→RJ · Atacadão',cat:'Receita com Frete',tipo:'entrada',val:4800,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-25),desc:'Frete Goiânia→Brasília · Klabin',cat:'Receita com Frete',tipo:'entrada',val:3200,placa:'ABX-9900',motorista:'Marcos Pinto',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-23),desc:'Frete Salvador→Recife · Ambev',cat:'Receita com Frete',tipo:'entrada',val:5600,placa:'PLT-5678',motorista:'João Ribeiro',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-20),desc:'Frete Goiânia→SP · JBS',cat:'Receita com Frete',tipo:'entrada',val:6200,placa:'RTZ-2211',motorista:'Pedro Assis',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-17),desc:'Frete BH→Campinas',cat:'Receita com Frete',tipo:'entrada',val:3800,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-12),desc:'Frete Goiânia→Cuiabá · Agrogeste',cat:'Receita com Frete',tipo:'entrada',val:5100,placa:'PLT-5678',motorista:'João Ribeiro',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-5),desc:'Frete Goiânia→Palmas · Martins',cat:'Receita com Frete',tipo:'entrada',val:4300,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-26),desc:'Combustível HJK-1234',cat:'Combustível',tipo:'saida',val:1850,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-24),desc:'Pedágio HJK-1234',cat:'Taxa de Pedágio',tipo:'saida',val:320,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-22),desc:'Combustível ABX-9900',cat:'Combustível',tipo:'saida',val:2100,placa:'ABX-9900',motorista:'Marcos Pinto',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-21),desc:'Manutenção HJK-1234',cat:'Manutenção de Veículos',tipo:'saida',val:2200,placa:'HJK-1234',motorista:'Carlos Mendes',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-18),desc:'Combustível PLT-5678',cat:'Combustível',tipo:'saida',val:1620,placa:'PLT-5678',motorista:'João Ribeiro',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-15),desc:'Combustível RTZ-2211',cat:'Combustível',tipo:'saida',val:1980,placa:'RTZ-2211',motorista:'Pedro Assis',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-11),desc:'Manutenção ABX-9900 · pneus',cat:'Manutenção de Veículos',tipo:'saida',val:2800,placa:'ABX-9900',motorista:'',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-20),desc:'Salários e encargos',cat:'Salários, Encargos e Benefícios',tipo:'saida',val:8400,placa:'',motorista:'',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-20),desc:'Aluguel galpão',cat:'Aluguel e Condomínio',tipo:'saida',val:2800,placa:'',motorista:'',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-10),desc:'Telefone e Internet',cat:'Telefone e Internet',tipo:'saida',val:380,placa:'',motorista:'',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-5),desc:'Energia Elétrica',cat:'Energia Elétrica',tipo:'saida',val:520,placa:'',motorista:'',by,byId,t:new Date().toISOString()},
-    {id:uid(),d:d(-4),desc:'Sistema ERP',cat:'Sistemas (softwares)',tipo:'saida',val:290,placa:'',motorista:'',by,byId,t:new Date().toISOString()},
-  ];
-}
-
 function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.parse(d)};}catch(e){}
   ['flux','receber','pagar','boletos','veiculos','ofx','caixas','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
   if(!S.users.length)S.users=SEED.map(s=>({...s,t:new Date().toISOString()}));
-  if(!S.veiculos.length)S.veiculos=SEED_VEIC.map(v=>({...v}));
-  if(!S.caixas.length)S.caixas=[
-    {id:'cx_nite',nome:'Caixa Nite',cor:'var(--mkt)',t:new Date().toISOString()},
-    {id:'cx_imp',nome:'Caixa Imperatriz',cor:'var(--ment)',t:new Date().toISOString()}
-  ];
-  if(!S.flux.length)S.flux=seedFretes();
+  // Dados de exemplo removidos — sistema sobe vazio para os dados reais.
+  // (veículos, caixas e lançamentos são criados pelo usuário no app)
   S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(!u.pin)u.pin='0000';if(u.caixaId===undefined)u.caixaId='';});
 }
 function save(){
@@ -1250,7 +1215,29 @@ function renderEquipa(){
 }
 
 /* ── RESET ── */
-function resetData(){if(!confirm('Apagar TODOS os dados deste dispositivo? Esta ação não pode ser desfeita.'))return;localStorage.removeItem(KEY);location.reload();}
+function zerarDadosFinanceiros(){
+  if(CR!=='gestor'){alert('Apenas o gestor pode zerar os dados.');return;}
+  if(!confirm('Zerar TODOS os dados financeiros (lançamentos, contas, boletos, veículos, caixas, relatórios)? Os usuários serão mantidos. A limpeza será aplicada também na nuvem.'))return;
+  S.flux=[];S.receber=[];S.pagar=[];S.boletos=[];S.veiculos=[];S.ofx=[];S.caixas=[];S.mem=[];S.hist=[];
+  log('Gestor zerou os dados financeiros (usuários mantidos).');
+  save();
+  alert('Dados financeiros zerados. O sistema está pronto para os dados reais.');
+  T(allowedPages()[0]||'fluxo');
+}
+function resetData(){
+  if(!confirm('Apagar TODOS os dados (incluindo usuários) deste dispositivo E da nuvem? O sistema voltará ao estado inicial. Esta ação não pode ser desfeita.'))return;
+  // limpa local
+  localStorage.removeItem(KEY);
+  // limpa nuvem antes de recarregar
+  if(FB_OK){
+    FB_SUSPEND=true;
+    setDoc(FB_DOC,{payload:JSON.stringify({...DEF}),updatedAt:Date.now()})
+      .catch(e=>console.warn('Falha ao limpar nuvem:',e))
+      .finally(()=>location.reload());
+  }else{
+    location.reload();
+  }
+}
 
 
 /* ════════ FERRAMENTAS AVANÇADAS (Auricélia) ════════ */
@@ -1620,7 +1607,7 @@ Object.assign(window,{
   onDcfTipoChange,onRoleChange,openVeicForm,pagarBoleto,pagarConta,pinClear,
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
-  setUserCaixa,setUserField,sp,toggleUserMod,updateDcfPreview
+  setUserCaixa,setUserField,sp,toggleUserMod,updateDcfPreview,zerarDadosFinanceiros
 });
 
 /* ── INIT ── */
