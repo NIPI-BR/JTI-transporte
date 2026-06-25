@@ -236,6 +236,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="psub" id="ddate"></div>
         <div id="dashScope"></div>
         <div id="dashKpis" class="g4"></div>
+        <div class="card" id="dashVenc"></div>
         <div class="g2">
           <div class="card"><div class="ctitle">Composição do mês</div><div id="dashChart"></div></div>
           <div class="card"><div class="ctitle">Últimos lançamentos</div><div id="dashRecent"><div class="empty">Nenhum lançamento ainda</div></div></div>
@@ -258,6 +259,7 @@ textarea{resize:vertical;min-height:60px}
               <input type="number" id="fx_val" placeholder="Valor (R$)" step="0.01" min="0">
             </div>
             <datalist id="fx_cats"><option>Vendas</option><option>Serviços</option><option>Salários</option><option>Fornecedores</option><option>Impostos</option><option>Aluguel</option><option>Marketing</option><option>Transporte</option><option>Combustível</option><option>Manutenção</option><option>Taxas financeiras / maquininha</option><option>Outros</option></datalist>
+            <datalist id="cc_list"></datalist>
             <div id="fx_caixa_wrap"></div>
             <button class="btn btnp" onclick="addFlux()">Lançar</button>
           </div>
@@ -284,7 +286,16 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
             <div class="ir"><input id="rc_desc" placeholder="Descrição"><select id="rc_cat"></select></div>
-            <div class="ir"><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
+            <div class="ir" style="align-items:center">
+              <select id="rc_recorr" onchange="document.getElementById('rc_nrec').style.display=this.value==='unica'?'none':'block'">
+                <option value="unica">Única</option>
+                <option value="mensal">Repetir mensalmente</option>
+                <option value="semanal">Repetir semanalmente</option>
+              </select>
+              <select id="rc_nrec" style="display:none"><option value="3">3×</option><option value="6">6×</option><option value="12" selected>12×</option><option value="24">24×</option></select>
+            </div>
+            <div class="ir"><input type="number" id="rc_juros" placeholder="% juros ao mês (atraso)" step="0.1" min="0"><input type="number" id="rc_multa" placeholder="% multa (atraso)" step="0.1" min="0"></div>
             <button class="btn btnp" onclick="addReceber()">Adicionar</button>
           </div>
         </div>
@@ -301,7 +312,16 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input id="pg_forn" placeholder="Fornecedor"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
             <div class="ir"><input id="pg_desc" placeholder="Descrição"><select id="pg_cat"></select></div>
-            <div class="ir"><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"><input id="pg_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
+            <div class="ir" style="align-items:center">
+              <select id="pg_recorr" onchange="document.getElementById('pg_nrec').style.display=this.value==='unica'?'none':'block'">
+                <option value="unica">Única</option>
+                <option value="mensal">Repetir mensalmente</option>
+                <option value="semanal">Repetir semanalmente</option>
+              </select>
+              <select id="pg_nrec" style="display:none"><option value="3">3×</option><option value="6">6×</option><option value="12" selected>12×</option><option value="24">24×</option></select>
+            </div>
+            <div class="ir"><input type="number" id="pg_juros" placeholder="% juros ao mês (atraso)" step="0.1" min="0"><input type="number" id="pg_multa" placeholder="% multa (atraso)" step="0.1" min="0"></div>
             <button class="btn btnp" onclick="addPagar()">Adicionar</button>
           </div>
         </div>
@@ -1110,9 +1130,45 @@ function renderDash(){
     +met('Resultado (mês)',money(mEnt-mSai),(mEnt-mSai)>=0?'var(--nipi)':'var(--peace)');
   // mini-gráfico de composição
   renderDashChart(all,cm);
+  renderVencimentos();
   const rec=[...all].sort((a,b)=>a.t<b.t?1:-1).slice(0,7);
   const rl=document.getElementById('dashRecent');
   if(rl)rl.innerHTML=rec.length?rec.map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${isFull()?' · '+esc(e.by||''):''}</div></div><span style="font-size:13px;font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Nenhum lançamento ainda</div>';
+}
+/* painel de vencimentos próximos no dashboard (cobrança/lembretes) */
+function renderVencimentos(){
+  const el=document.getElementById('dashVenc');if(!el)return;
+  const recAb=S.receber.filter(c=>c.status==='aberto');
+  const pagAb=S.pagar.filter(c=>c.status==='aberto');
+  const classifica=(c)=>{const d=days(c.venc);return d<0?'vencido':d<=7?'prox':'futuro';};
+  const recVenc=recAb.filter(c=>classifica(c)==='vencido');
+  const recProx=recAb.filter(c=>classifica(c)==='prox');
+  const pagVenc=pagAb.filter(c=>classifica(c)==='vencido');
+  const pagProx=pagAb.filter(c=>classifica(c)==='prox');
+  if(!recVenc.length&&!recProx.length&&!pagVenc.length&&!pagProx.length){
+    el.innerHTML='<div class="ctitle">Vencimentos</div><div class="empty">Nenhuma conta vencida ou a vencer nos próximos 7 dias 🎉</div>';
+    return;
+  }
+  const linha=(c,tipo)=>{
+    const d=days(c.venc);const venc=d<0;const acr=acrescimo(c);
+    const nome=tipo==='rec'?c.cli:c.forn;
+    const cor=tipo==='rec'?'var(--nipi)':'var(--peace)';
+    const tag=venc?`<span class="badge bdanger">Vencido ${Math.abs(d)}d</span>`:d===0?`<span class="badge bwarn">Hoje</span>`:`<span class="badge bwarn">${d}d</span>`;
+    const btn=tipo==='rec'?`<button class="btn btnsm" onclick="cobrar('${c.id}')" title="Gerar cobrança">✉</button>`:'';
+    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(nome)}</div><div class="rsub">${esc(c.desc||'')} · venc. ${fmt(c.venc)}${acr>0?' · +'+money(acr):''}</div></div><div class="rright">${tag}<span style="font-weight:600;color:${cor}">${money(c.val+acr)}</span>${btn}</div></div>`;
+  };
+  let h='<div class="ctitle">Vencimentos — atenção</div>';
+  const totRecV=recVenc.reduce((s,c)=>s+valorAtualizado(c),0);
+  const totPagV=pagVenc.reduce((s,c)=>s+valorAtualizado(c),0);
+  if(recVenc.length||pagVenc.length){
+    h+=`<div class="stitle" style="color:var(--dngt)">Vencidas — receber ${money(totRecV)} · pagar ${money(totPagV)}</div>`;
+    h+=[...recVenc.map(c=>linha(c,'rec')),...pagVenc.map(c=>linha(c,'pag'))].join('');
+  }
+  if(recProx.length||pagProx.length){
+    h+='<div class="stitle">A vencer (7 dias)</div>';
+    h+=[...recProx.map(c=>linha(c,'rec')),...pagProx.map(c=>linha(c,'pag'))].join('');
+  }
+  el.innerHTML=h;
 }
 function renderDashChart(all,cm){
   const el=document.getElementById('dashChart');if(!el)return;
@@ -1135,73 +1191,125 @@ function renderDashChart(all,cm){
   <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--t2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#1D9E75"></span>Entradas</span><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#D85A30"></span>Saídas</span></div>`;
 }
 
+/* ── helpers compartilhados de contas ── */
+function avancaDataConta(iso,i,freq){const base=new Date(iso+'T12:00:00');const dt=new Date(base);if(freq==='semanal')dt.setDate(base.getDate()+i*7);else dt.setMonth(base.getMonth()+i);return dt.toISOString().slice(0,10);}
+/* calcula acréscimo de juros (ao mês, pro rata) + multa para conta vencida */
+function acrescimo(c){
+  const d=days(c.venc);if(d>=0)return 0;
+  const atraso=Math.abs(d);
+  const multa=(c.multa||0)/100*c.val;
+  const juros=(c.juros||0)/100*c.val*(atraso/30); // pró-rata mensal
+  return multa+juros;
+}
+function valorAtualizado(c){return c.val+acrescimo(c);}
+/* lista de centros de custo já usados (para o datalist) */
+function centrosCusto(){
+  const set=new Set();
+  S.flux.forEach(e=>{if(e.cc)set.add(e.cc);});
+  S.pagar.forEach(c=>{if(c.cc)set.add(c.cc);});
+  S.receber.forEach(c=>{if(c.cc)set.add(c.cc);});
+  return [...set].sort();
+}
+function renderCCList(){const dl=document.getElementById('cc_list');if(dl)dl.innerHTML=centrosCusto().map(c=>`<option>${esc(c)}</option>`).join('');}
+
 /* ════════ CONTAS A RECEBER ════════ */
 function addReceber(){
   const cli=v('rc_cli').trim(),venc=vData('rc_venc'),desc=v('rc_desc').trim(),cat=v('rc_cat'),val=parseFloat(v('rc_val'));
+  const cc=v('rc_cc').trim(),juros=parseFloat(v('rc_juros'))||0,multa=parseFloat(v('rc_multa'))||0;
+  const recorr=v('rc_recorr')||'unica',nrec=parseInt(v('rc_nrec'))||1;
   if(!cli){alert('Informe o cliente.');return;}
   if(!venc){alert('Informe o vencimento.');return;}
   if(!val||val<=0){alert('Informe um valor válido.');return;}
-  S.receber.push({id:uid(),cli,venc,desc,cat,val,status:'aberto',by:CU,t:new Date().toISOString()});
-  log('Adicionou conta a receber: '+cli+' ('+money(val)+')');save();
-  clr('rc_cli','rc_venc','rc_desc','rc_val');renderReceber();
+  const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
+  for(let i=0;i<n;i++){
+    const vdt=n>1?avancaDataConta(venc,i,recorr):venc;
+    S.receber.push({id:uid(),cli,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,by:CU,t:new Date().toISOString()});
+  }
+  log('Adicionou conta a receber: '+cli+' ('+money(val)+(n>1?' x'+n:'')+')');save();
+  clr('rc_cli','rc_venc','rc_desc','rc_val','rc_cc','rc_juros','rc_multa');renderReceber();
 }
 function receberConta(id){
   const c=S.receber.find(x=>x.id===id);if(!c)return;
-  c.status='recebido';c.recebidoEm=new Date().toISOString().slice(0,10);
-  S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')',cat:c.cat||'Recebimentos',tipo:'entrada',val:c.val,by:CU,byId:CUID,t:new Date().toISOString()});
-  log('Recebeu conta: '+c.cli);save();renderReceber();renderDash();renderFluxo();renderPagas();
+  const acr=acrescimo(c);const total=c.val+acr;
+  c.status='recebido';c.recebidoEm=new Date().toISOString().slice(0,10);c.valRecebido=total;
+  S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Recebimentos',cc:c.cc||'',tipo:'entrada',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
+  log('Recebeu conta: '+c.cli+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderReceber();renderDash();renderFluxo();renderPagas();
 }
 function delReceber(id){const c=S.receber.find(x=>x.id===id);if(!c)return;if(!confirm('Remover?'))return;S.receber=S.receber.filter(x=>x.id!==id);log('Removeu conta a receber: '+c.cli);save();renderReceber();}
+/* gera mensagem de cobrança pronta para copiar */
+function cobrar(id){
+  const c=S.receber.find(x=>x.id===id);if(!c)return;
+  const d=days(c.venc);const acr=acrescimo(c);const total=c.val+acr;
+  let msg;
+  if(d<0)msg=`Olá! Consta em aberto a cobrança "${c.desc||c.cli}" no valor de ${money(c.val)}, vencida em ${fmt(c.venc)} (${Math.abs(d)} dia(s) em atraso).`+(acr>0?` Com juros e multa, o total atualizado é ${money(total)}.`:'')+` Por gentileza, regularizar. Obrigado!`;
+  else if(d===0)msg=`Olá! Lembrete: a cobrança "${c.desc||c.cli}" no valor de ${money(c.val)} vence HOJE (${fmt(c.venc)}). Obrigado!`;
+  else msg=`Olá! Lembrete: a cobrança "${c.desc||c.cli}" no valor de ${money(c.val)} vence em ${fmt(c.venc)} (${d} dia(s)). Obrigado!`;
+  navigator.clipboard&&navigator.clipboard.writeText(msg);
+  alert('Mensagem de cobrança copiada:\n\n'+msg);
+}
 function renderReceber(){
   const sel=document.getElementById('rc_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_ENTRADA_(),cur);}
+  renderCCList();
   const abertos=S.receber.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
-  const venc=abertos.filter(c=>days(c.venc)<0).reduce((s,c)=>s+c.val,0);
+  const venc=abertos.filter(c=>days(c.venc)<0).reduce((s,c)=>s+valorAtualizado(c),0);
   const sem=abertos.filter(c=>days(c.venc)>=0&&days(c.venc)<=7).reduce((s,c)=>s+c.val,0);
   const k=document.getElementById('recKpis');
   if(k)k.innerHTML=met('Total a receber',money(tot),'var(--nipi)')
-    +met('Vencido',money(venc),'var(--peace)')
+    +met('Vencido (c/ juros)',money(venc),'var(--peace)')
     +met('Vence em 7 dias',money(sem),'var(--com)');
   const tb=document.getElementById('recTable');
   const list=[...abertos].sort((a,b)=>a.venc.localeCompare(b.venc));
   if(tb)tb.innerHTML=list.length?list.map(c=>{
     const d=days(c.venc);const bdg=d<0?`<span class="badge bdanger">Vencido ${Math.abs(d)}d</span>`:d<=7?`<span class="badge bwarn">${d}d</span>`:`<span class="badge bgray">${d}d</span>`;
-    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.cli)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''} · venc. ${fmt(c.venc)}</div></div><div class="rright">${bdg}<span style="font-weight:600;color:var(--nipi)">${money(c.val)}</span><button class="btn btnsm btnnipi" onclick="receberConta('${c.id}')">Receber</button><button class="btn btnsm" onclick="delReceber('${c.id}')">✕</button></div></div>`;
+    const acr=acrescimo(c);
+    const valTxt=acr>0?`<span style="font-weight:600;color:var(--nipi)">${money(c.val+acr)}</span> <span class="rsub">(+${money(acr)})</span>`:`<span style="font-weight:600;color:var(--nipi)">${money(c.val)}</span>`;
+    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.cli)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''}${c.cc?' · 🏷 '+esc(c.cc):''} · venc. ${fmt(c.venc)}</div></div><div class="rright">${bdg}${valTxt}<button class="btn btnsm" onclick="cobrar('${c.id}')" title="Gerar cobrança">✉</button><button class="btn btnsm btnnipi" onclick="receberConta('${c.id}')">Receber</button><button class="btn btnsm" onclick="delReceber('${c.id}')">✕</button></div></div>`;
   }).join(''):'<div class="empty">Nenhuma conta a receber em aberto</div>';
 }
 
 /* ════════ CONTAS A PAGAR ════════ */
 function addPagar(){
   const forn=v('pg_forn').trim(),venc=vData('pg_venc'),desc=v('pg_desc').trim(),cat=v('pg_cat'),val=parseFloat(v('pg_val'));
+  const cc=v('pg_cc').trim(),juros=parseFloat(v('pg_juros'))||0,multa=parseFloat(v('pg_multa'))||0;
+  const recorr=v('pg_recorr')||'unica',nrec=parseInt(v('pg_nrec'))||1;
   if(!forn){alert('Informe o fornecedor.');return;}
   if(!venc){alert('Informe o vencimento.');return;}
   if(!val||val<=0){alert('Informe um valor válido.');return;}
-  S.pagar.push({id:uid(),forn,venc,desc,cat,val,status:'aberto',by:CU,t:new Date().toISOString()});
-  log('Adicionou conta a pagar: '+forn+' ('+money(val)+')');save();
-  clr('pg_forn','pg_venc','pg_desc','pg_val');renderPagar();
+  const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
+  for(let i=0;i<n;i++){
+    const vdt=n>1?avancaDataConta(venc,i,recorr):venc;
+    S.pagar.push({id:uid(),forn,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,by:CU,t:new Date().toISOString()});
+  }
+  log('Adicionou conta a pagar: '+forn+' ('+money(val)+(n>1?' x'+n:'')+')');save();
+  clr('pg_forn','pg_venc','pg_desc','pg_val','pg_cc','pg_juros','pg_multa');renderPagar();
 }
 function pagarConta(id){
   const c=S.pagar.find(x=>x.id===id);if(!c)return;
-  c.status='pago';c.pagoEm=new Date().toISOString().slice(0,10);
-  S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')',cat:c.cat||'Pagamentos',tipo:'saida',val:c.val,by:CU,byId:CUID,t:new Date().toISOString()});
-  log('Pagou conta: '+c.forn);save();renderPagar();renderDash();renderFluxo();renderPagas();
+  const acr=acrescimo(c);const total=c.val+acr;
+  c.status='pago';c.pagoEm=new Date().toISOString().slice(0,10);c.valPago=total;
+  S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Pagamentos',cc:c.cc||'',tipo:'saida',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
+  log('Pagou conta: '+c.forn+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderPagar();renderDash();renderFluxo();renderPagas();
 }
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;if(!confirm('Remover?'))return;S.pagar=S.pagar.filter(x=>x.id!==id);log('Removeu conta a pagar: '+c.forn);save();renderPagar();}
 function renderPagar(){
   const sel=document.getElementById('pg_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_SAIDA_(),cur);}
+  renderCCList();
   const abertos=S.pagar.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
-  const venc=abertos.filter(c=>days(c.venc)<0).reduce((s,c)=>s+c.val,0);
+  const venc=abertos.filter(c=>days(c.venc)<0).reduce((s,c)=>s+valorAtualizado(c),0);
   const sem=abertos.filter(c=>days(c.venc)>=0&&days(c.venc)<=7).reduce((s,c)=>s+c.val,0);
   const k=document.getElementById('payKpis');
   if(k)k.innerHTML=met('Total a pagar',money(tot),'var(--peace)')
-    +met('Vencido',money(venc),'var(--peace)')
+    +met('Vencido (c/ juros)',money(venc),'var(--peace)')
     +met('Vence em 7 dias',money(sem),'var(--com)');
   const tb=document.getElementById('payTable');
   const list=[...abertos].sort((a,b)=>a.venc.localeCompare(b.venc));
   if(tb)tb.innerHTML=list.length?list.map(c=>{
     const d=days(c.venc);const bdg=d<0?`<span class="badge bdanger">Vencido ${Math.abs(d)}d</span>`:d<=7?`<span class="badge bwarn">${d}d</span>`:`<span class="badge bgray">${d}d</span>`;
-    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.forn)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''} · venc. ${fmt(c.venc)}</div></div><div class="rright">${bdg}<span style="font-weight:600;color:var(--peace)">${money(c.val)}</span><button class="btn btnsm btnp" onclick="pagarConta('${c.id}')">Pagar</button><button class="btn btnsm" onclick="delPagar('${c.id}')">✕</button></div></div>`;
+    const acr=acrescimo(c);
+    const valTxt=acr>0?`<span style="font-weight:600;color:var(--peace)">${money(c.val+acr)}</span> <span class="rsub">(+${money(acr)})</span>`:`<span style="font-weight:600;color:var(--peace)">${money(c.val)}</span>`;
+    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.forn)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''}${c.cc?' · 🏷 '+esc(c.cc):''} · venc. ${fmt(c.venc)}</div></div><div class="rright">${bdg}${valTxt}<button class="btn btnsm btnp" onclick="pagarConta('${c.id}')">Pagar</button><button class="btn btnsm" onclick="delPagar('${c.id}')">✕</button></div></div>`;
   }).join(''):'<div class="empty">Nenhuma conta a pagar em aberto</div>';
 }
 
@@ -1884,6 +1992,9 @@ function gerarRelatorio(){
   // agrupar por categoria
   const cats={};ls.forEach(e=>{const k=(e.tipo==='entrada'?'＋ ':'－ ')+(e.cat||'Sem categoria');cats[k]=(cats[k]||0)+(e.tipo==='entrada'?e.val:-e.val);});
   const catRows=Object.entries(cats).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([k,vv])=>`<div class="row"><div class="rlabel">${esc(k)}</div><div class="mono" style="font-weight:600;color:${vv>=0?'var(--nipi)':'var(--peace)'}">${money(vv)}</div></div>`).join('');
+  // agrupar por centro de custo
+  const ccs={};ls.forEach(e=>{if(!e.cc)return;ccs[e.cc]=(ccs[e.cc]||0)+(e.tipo==='entrada'?e.val:-e.val);});
+  const ccRows=Object.entries(ccs).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([k,vv])=>`<div class="row"><div class="rlabel">🏷 ${esc(k)}</div><div class="mono" style="font-weight:600;color:${vv>=0?'var(--nipi)':'var(--peace)'}">${money(vv)}</div></div>`).join('');
   const cxNome=cx==='__none__'?'Sem caixa':(cx?caixaNome(cx):'Todos os caixas');
   document.getElementById('relResultado').innerHTML=`
     <div class="card">
@@ -1895,8 +2006,9 @@ function gerarRelatorio(){
       </div>
       <div class="stitle">Por categoria</div>
       ${catRows||'<div class="empty">Nenhum lançamento no período</div>'}
+      ${ccRows?'<div class="stitle">Por centro de custo</div>'+ccRows:''}
       <div class="stitle">Lançamentos (${ls.length})</div>
-      ${ls.length?[...ls].sort((a,b)=>a.d.localeCompare(b.d)).map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}</div></div><span style="font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Sem lançamentos</div>'}
+      ${ls.length?[...ls].sort((a,b)=>a.d.localeCompare(b.d)).map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.cc?' · 🏷 '+esc(e.cc):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}</div></div><span style="font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Sem lançamentos</div>'}
     </div>`;
 }
 function exportRelatorioCSV(){
@@ -1935,7 +2047,7 @@ Object.assign(window,{
   setUserCaixa,setUserField,sp,toggleUserMod,updateDcfPreview,zerarDadosFinanceiros,
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
-  openEditLanc,closeEditLanc,saveEditLanc,edTipoChange
+  openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar
 });
 
 /* ── INIT ── */
