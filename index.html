@@ -610,6 +610,8 @@ textarea{resize:vertical;min-height:60px}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDA6abgq3H_FLApBqatM-pXN1addl5rHiw",
@@ -621,12 +623,13 @@ const firebaseConfig = {
   measurementId: "G-VD5TELX4QV"
 };
 
-let FB_DB=null, FB_OK=false, FB_DOC=null, FB_SUSPEND=false, FB_LASTSIG='';
+let FB_DB=null, FB_OK=false, FB_DOC=null, FB_SUSPEND=false, FB_LASTSIG='', FB_AUTH=null, FB_READY=false;
 const CLOUD_PATH=['auricelia','dados']; // coleção/documento único compartilhado
 
 try{
   const fbApp=initializeApp(firebaseConfig);
   FB_DB=getFirestore(fbApp);
+  FB_AUTH=getAuth(fbApp);
   FB_DOC=doc(FB_DB,CLOUD_PATH[0],CLOUD_PATH[1]);
   FB_OK=true;
 }catch(e){console.warn('Firebase não inicializou, usando apenas dados locais.',e);}
@@ -643,7 +646,7 @@ function stateSig(obj){try{return JSON.stringify(obj).length+':'+(obj.flux?obj.f
 
 /* sobe o estado atual para a nuvem */
 async function cloudPush(){
-  if(!FB_OK||FB_SUSPEND)return;
+  if(!FB_OK||FB_SUSPEND||!FB_READY)return;
   try{
     cloudStatus('Sincronizando…','sync');
     await setDoc(FB_DOC,{payload:JSON.stringify(S),updatedAt:Date.now()});
@@ -684,11 +687,20 @@ function cloudListen(){
 async function cloudInit(){
   if(!FB_OK){cloudStatus('Somente local','');return;}
   try{
+    cloudStatus('Autenticando…','sync');
+    await signInAnonymously(FB_AUTH);   // login anônimo exigido pelas regras
+    FB_READY=true;
+  }catch(e){
+    console.warn('Falha no login anônimo do Firebase:',e);
+    cloudStatus('Offline · ative o Login anônimo no Firebase','err');
+    return;
+  }
+  try{
     const snap=await getDoc(FB_DOC);
     if(snap.exists()&&snap.data().payload){
       const incoming=JSON.parse(snap.data().payload);
       S={...DEF,...incoming};
-      ['flux','receber','pagar','boletos','veiculos','ofx','caixas','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
+      ['flux','receber','pagar','boletos','veiculos','ofx','caixas','categorias','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
       try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
       FB_LASTSIG=stateSig(S);
       renderProfiles();
