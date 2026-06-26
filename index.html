@@ -7,12 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F7F6F2;--surface:#FFF;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
-  --text:#1A1A18;--t2:#6B6A65;--t3:#9B9A95;
+  --bg:#F4F6F8;--surface:#FFF;--border:rgba(15,40,50,0.09);--border2:rgba(15,40,50,0.16);
+  --text:#13343B;--t2:#5A6B70;--t3:#93A1A5;
   --nipi:#1D9E75;--nl:#E1F5EE;--gr:#378ADD;--gl:#E6F1FB;
   --ment:#7F77DD;--ml:#EEEDFE;--peace:#D85A30;--pl:#FAECE7;
   --mkt:#D4537E;--mktl:#FBEAF0;--com:#BA7517;--cl:#FAEEDA;
   --ok:#D1F2D1;--okt:#1A5C1A;--warn:#FFF3CD;--warnt:#856404;--dng:#FFEBEB;--dngt:#A32D2D;
+  --side:#0D434E;--side2:#10515E;--side-txt:#A9C4CB;--side-act:#1D9E75;
   --r:12px;--rs:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -88,26 +89,26 @@ h1,h2,h3,.serif{font-family:'DM Serif Display',serif;font-weight:400}
 @media(max-width:480px){.edit-body{grid-template-columns:1fr}}
 
 .body{display:flex;min-height:calc(100vh - 52px)}
-.sidebar{width:210px;background:var(--surface);border-right:1px solid var(--border);padding:.75rem;position:fixed;height:calc(100vh - 52px);overflow-y:auto;top:52px;z-index:50}
-.nsec{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--t3);text-transform:uppercase;margin:.9rem .5rem .35rem}
-.nitem{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--rs);cursor:pointer;font-size:13px;color:var(--t2);transition:all .12s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left}
-.nitem:hover{background:var(--bg);color:var(--text)}.nitem.active{background:var(--text);color:#fff}
+.sidebar{width:222px;background:var(--side);border-right:none;padding:1rem .7rem;position:fixed;height:calc(100vh - 52px);overflow-y:auto;top:52px;z-index:50}
+.nsec{font-size:10px;font-weight:600;letter-spacing:.08em;color:rgba(169,196,203,.55);text-transform:uppercase;margin:1.1rem .6rem .4rem}
+.nitem{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--rs);cursor:pointer;font-size:13px;color:var(--side-txt);transition:all .12s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-weight:500}
+.nitem:hover{background:var(--side2);color:#fff}.nitem.active{background:var(--side-act);color:#fff;font-weight:600}
 .ndot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 
-.main{margin-left:210px;flex:1;padding:1.5rem;max-width:calc(100vw - 210px)}
+.main{margin-left:222px;flex:1;padding:1.7rem 2rem;max-width:calc(100vw - 222px)}
 .page{display:none}.page.active{display:block}
 .ptitle{font-family:'DM Serif Display',serif;font-size:23px;margin-bottom:3px}
 .psub{font-size:13px;color:var(--t3);margin-bottom:1.25rem}
 
 /* ── COMPONENTS ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;margin-bottom:.9rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,40,50,.04)}
 .ctitle{font-size:13px;font-weight:600;color:var(--text);margin-bottom:11px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin-bottom:.9rem}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin-bottom:.9rem}
 .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:.9rem}
-.met{background:var(--bg);border-radius:var(--rs);padding:.9rem;border-left:3px solid var(--text)}
-.mlabel{font-size:11px;color:var(--t3);margin-bottom:3px}
-.mval{font-size:22px;font-weight:600;font-family:'DM Serif Display',serif}.msub{font-size:11px;color:var(--t3);margin-top:2px}
+.met{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:1.05rem 1.1rem;border-left:3px solid var(--text);box-shadow:0 1px 3px rgba(15,40,50,.04)}
+.mlabel{font-size:11px;color:var(--t2);margin-bottom:4px;font-weight:500}
+.mval{font-size:24px;font-weight:600;font-family:'DM Serif Display',serif;color:var(--text)}.msub{font-size:11px;color:var(--t3);margin-top:2px}
 .row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);gap:10px}
 .row:last-child{border-bottom:none}
 .rlabel{font-size:13px}.rsub{font-size:11px;color:var(--t3)}.rright{display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -236,6 +237,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="psub" id="ddate"></div>
         <div id="dashScope"></div>
         <div id="dashKpis" class="g4"></div>
+        <div id="dashAlertas"></div>
         <div class="card" id="dashVenc"></div>
         <div class="g2">
           <div class="card"><div class="ctitle">Composição do mês</div><div id="dashChart"></div></div>
@@ -284,9 +286,10 @@ textarea{resize:vertical;min-height:60px}
         <div class="card">
           <div class="ctitle">Nova conta a receber</div>
           <div class="mf">
-            <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
-            <div class="ir"><input id="rc_desc" placeholder="Descrição"><select id="rc_cat"></select></div>
-            <div class="ir"><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
+            <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input id="rc_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px"><button class="btn btnsm" onclick="buscarCNPJReceber()">🔎 CNPJ</button></div>
+            <div class="ir"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="rc_desc" placeholder="Descrição" oninput="autoCat('rc')"></div>
+            <div class="ir"><select id="rc_cat"></select><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="rc_recorr" onchange="document.getElementById('rc_nrec').style.display=this.value==='unica'?'none':'block'">
                 <option value="unica">Única</option>
@@ -310,9 +313,18 @@ textarea{resize:vertical;min-height:60px}
         <div class="card">
           <div class="ctitle">Nova conta a pagar</div>
           <div class="mf">
-            <div class="ir"><input id="pg_forn" placeholder="Fornecedor"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
-            <div class="ir"><input id="pg_desc" placeholder="Descrição"><select id="pg_cat"></select></div>
-            <div class="ir"><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"><input id="pg_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
+            <div class="ir" style="align-items:center;background:var(--nl);padding:8px;border-radius:var(--rs)">
+              <input id="pg_boleto" placeholder="📷 Cole a linha digitável do boleto (preenche valor e vencimento)">
+              <button class="btn btnsm btnnipi" onclick="lerBoletoPagar()">Ler boleto</button>
+            </div>
+            <div class="ir">
+              <input id="pg_forn" placeholder="Fornecedor (ou digite CNPJ + buscar)">
+              <input id="pg_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px">
+              <button class="btn btnsm" onclick="buscarCNPJPagar()">🔎 CNPJ</button>
+            </div>
+            <div class="ir"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="pg_desc" placeholder="Descrição" oninput="autoCat('pg')"></div>
+            <div class="ir"><select id="pg_cat"></select><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input id="pg_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="pg_recorr" onchange="document.getElementById('pg_nrec').style.display=this.value==='unica'?'none':'block'">
                 <option value="unica">Única</option>
@@ -324,6 +336,11 @@ textarea{resize:vertical;min-height:60px}
             <div class="ir"><input type="number" id="pg_juros" placeholder="% juros ao mês (atraso)" step="0.1" min="0"><input type="number" id="pg_multa" placeholder="% multa (atraso)" step="0.1" min="0"></div>
             <button class="btn btnp" onclick="addPagar()">Adicionar</button>
           </div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Importar nota fiscal (XML)</div>
+          <div style="font-size:12px;color:var(--t3);margin-bottom:8px">Suba o XML da NF-e ou NFS-e e o sistema preenche fornecedor, valor e vencimento na conta a pagar acima.</div>
+          <input type="file" id="nf_file" accept=".xml,.XML" onchange="importarNF(event)">
         </div>
         <div class="card"><div class="ctitle">Em aberto</div><div id="payTable"><div class="empty">Nenhuma conta a pagar</div></div></div>
       </div>
@@ -469,10 +486,15 @@ textarea{resize:vertical;min-height:60px}
         <div class="psub">Relatório do que já foi pago e recebido no período.</div>
         <div class="filter-bar">
           <select id="pagas_per" onchange="renderPagas()" style="width:auto"><option value="mes">Mês atual</option><option value="trim">Trimestre</option><option value="ano">Ano</option><option value="tudo">Tudo</option></select>
-          <select id="pagas_tipo" onchange="renderPagas()" style="width:auto"><option value="todos">Pagas + Recebidas</option><option value="pago">Só pagas</option><option value="recebido">Só recebidas</option></select>
+          <select id="pagas_tipo" onchange="renderPagas()" style="width:auto"><option value="todos">Movimento (entradas + saídas)</option><option value="recebido">Só contas recebidas</option><option value="pago">Só contas pagas</option></select>
           <input id="pagas_q" placeholder="🔍 Buscar..." oninput="renderPagas()" style="width:auto">
-          <button class="btn btnsm" onclick="exportPagasCSV()">⬇ CSV</button>
-          <button class="btn btnsm" onclick="window.print()">🖨 PDF</button>
+        </div>
+        <div class="filter-bar" style="margin-top:-4px">
+          <span style="font-size:12px;color:var(--t3);align-self:center">Exportar / imprimir:</span>
+          <button class="btn btnsm" onclick="exportPagasCSV()">⬇ CSV (visão atual)</button>
+          <button class="btn btnsm" onclick="imprimirPagas('todos')">🖨 Movimento</button>
+          <button class="btn btnsm" onclick="imprimirPagas('recebido')">🖨 Recebidas</button>
+          <button class="btn btnsm" onclick="imprimirPagas('pago')">🖨 Pagas</button>
         </div>
         <div id="pagasKpis" class="g4"></div>
         <div class="card"><div class="ctitle">Movimentações realizadas</div><div id="pagasTable"><div class="empty">Nenhuma movimentação no período</div></div></div>
@@ -742,7 +764,7 @@ async function cloudInit(){
    Papéis: gestor (admin) · operacional · dona · membro
 ════════════════════════════════════════ */
 const KEY='nipihub_fin_v3';
-const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],categorias:[],users:[],mem:[],hist:[]};
+const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],categorias:[],regrasCat:{},users:[],mem:[],hist:[]};
 let S={...DEF};
 let CU='',CUID='',CD='',CR='',CA=[],CCX='';  // current user name, id, dept, role, access, caixaId
 let CAIXA_FILTER='__all__';            // filtro de caixa selecionado (telas de visão completa)
@@ -784,6 +806,7 @@ function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.par
   // Dados de exemplo removidos — sistema sobe vazio para os dados reais.
   // (veículos, caixas e lançamentos são criados pelo usuário no app)
   S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(!u.pin)u.pin='0000';if(u.caixaId===undefined)u.caixaId='';});
+  if(!S.regrasCat||typeof S.regrasCat!=='object'||Array.isArray(S.regrasCat))S.regrasCat={};
 }
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
@@ -899,6 +922,7 @@ function startSession(u){
   // membro vê dashboard do próprio caixa
   document.getElementById('dashTitle').textContent=isFull()?'Dashboard':'Meu Caixa';
   buildSidebar();
+  if(isFull())gerarRecorrentesAuto(); // gera contas recorrentes vencidas automaticamente
   const first=allowedPages()[0]||'fluxo';
   sp(first);renderAll();
 }
@@ -1131,6 +1155,7 @@ function renderDash(){
   // mini-gráfico de composição
   renderDashChart(all,cm);
   renderVencimentos();
+  renderAlertas();
   const rec=[...all].sort((a,b)=>a.t<b.t?1:-1).slice(0,7);
   const rl=document.getElementById('dashRecent');
   if(rl)rl.innerHTML=rec.length?rec.map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${isFull()?' · '+esc(e.by||''):''}</div></div><span style="font-size:13px;font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Nenhum lançamento ainda</div>';
@@ -1169,6 +1194,18 @@ function renderVencimentos(){
     h+=[...recProx.map(c=>linha(c,'rec')),...pagProx.map(c=>linha(c,'pag'))].join('');
   }
   el.innerHTML=h;
+}
+/* painel de alertas inteligentes no dashboard */
+function renderAlertas(){
+  const el=document.getElementById('dashAlertas');if(!el)return;
+  const alertas=alertasInteligentes();
+  if(!alertas.length){el.innerHTML='';return;}
+  const cor={danger:'var(--dng)',warn:'var(--com)',info:'var(--gr)'};
+  const bg={danger:'#FBEAE5',warn:'#FBF3E2',info:'#E8F1FB'};
+  const ico={danger:'⚠️',warn:'🔔',info:'💡'};
+  el.innerHTML='<div class="card" style="margin-bottom:1rem"><div class="ctitle">Alertas inteligentes</div>'+
+    alertas.map(a=>`<div style="display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:var(--rs);background:${bg[a.tipo]};margin-bottom:6px;border-left:3px solid ${cor[a.tipo]}"><span>${ico[a.tipo]}</span><span style="font-size:13px;color:var(--t2);line-height:1.4">${esc(a.msg)}</span></div>`).join('')+
+    '</div>';
 }
 function renderDashChart(all,cm){
   const el=document.getElementById('dashChart');if(!el)return;
@@ -1212,6 +1249,197 @@ function centrosCusto(){
 }
 function renderCCList(){const dl=document.getElementById('cc_list');if(dl)dl.innerHTML=centrosCusto().map(c=>`<option>${esc(c)}</option>`).join('');}
 
+/* ════════════════════════════════════════
+   AUTOMAÇÕES (sem servidor)
+════════════════════════════════════════ */
+
+/* ── 1. Boleto: extrai valor e vencimento da linha digitável ── */
+function parseLinhaDigitavel(raw){
+  const s=(raw||'').replace(/\D/g,'');
+  // Boleto bancário: 47 dígitos. Convênio/arrecadação: 48 dígitos.
+  if(s.length===47){
+    // fator de vencimento: posições 33-36 (após remover dígitos verificadores dos campos)
+    // estrutura: campo1(0-9) campo2(10-20) campo3(21-31) dv(32) fator(33-36) valor(37-46)
+    const fator=parseInt(s.substr(33,4),10);
+    const centavos=parseInt(s.substr(37,10),10);
+    const val=centavos/100;
+    let venc='';
+    if(fator>0){
+      // base 07/10/1997; a partir de 22/02/2025 o fator reinicia, mas mantemos a base clássica
+      const base=new Date(1997,9,7);
+      base.setDate(base.getDate()+fator);
+      venc=base.toISOString().slice(0,10);
+    }
+    return {ok:true,tipo:'bancario',val:val>0?val:null,venc};
+  }
+  if(s.length===48){
+    // arrecadação (concessionárias): valor nas posições 4-14
+    const centavos=parseInt(s.substr(4,11),10);
+    const val=centavos/100;
+    return {ok:true,tipo:'arrecadacao',val:val>0?val:null,venc:''};
+  }
+  return {ok:false};
+}
+
+/* ── 4. Busca dados da empresa pelo CNPJ (BrasilAPI) ── */
+async function buscarCNPJ(cnpj){
+  const c=(cnpj||'').replace(/\D/g,'');
+  if(c.length!==14)return {ok:false,erro:'CNPJ deve ter 14 dígitos.'};
+  try{
+    const r=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+c);
+    if(!r.ok)return {ok:false,erro:'CNPJ não encontrado.'};
+    const d=await r.json();
+    return {ok:true,nome:d.razao_social||d.nome_fantasia||'',fantasia:d.nome_fantasia||'',
+      cidade:d.municipio||'',uf:d.uf||'',cnpj:c};
+  }catch(e){return {ok:false,erro:'Falha ao consultar (sem internet?).'};}
+}
+function fmtCNPJ(c){c=(c||'').replace(/\D/g,'');if(c.length!==14)return c;return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5');}
+
+/* ── 3. Importar XML de NF-e / NFS-e → cria conta ── */
+function parseNFXML(txt){
+  try{
+    const doc=new DOMParser().parseFromString(txt,'text/xml');
+    const g=(tags)=>{for(const t of tags){const el=doc.getElementsByTagName(t)[0];if(el&&el.textContent.trim())return el.textContent.trim();}return '';};
+    // valor total
+    let val=parseFloat(g(['vNF','vLiq','ValorLiquidoNfse','vServ','ValorServicos','vTotal']))||0;
+    // emitente (fornecedor)
+    let nome=g(['xNome','RazaoSocial','xFant'])||'Fornecedor (NF)';
+    // data
+    let dataRaw=g(['dhEmi','dEmi','DataEmissao','dCompet']);
+    let venc='';
+    if(dataRaw){const m=dataRaw.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)venc=`${m[1]}-${m[2]}-${m[3]}`;}
+    // número da nota
+    let num=g(['nNF','Numero','nDPS']);
+    return {ok:val>0,nome,val,venc,num};
+  }catch(e){return {ok:false};}
+}
+
+/* ── 10/11. Categorização inteligente: aprende desc→categoria ── */
+function aprdCategoria(desc,cat){
+  if(!desc||!cat)return;
+  if(!S.regrasCat)S.regrasCat={};
+  const chave=desc.trim().toLowerCase().split(/\s+/).slice(0,2).join(' ');
+  if(chave)S.regrasCat[chave]=cat;
+}
+function sugereCategoria(desc){
+  if(!S.regrasCat||!desc)return '';
+  const d=desc.trim().toLowerCase();
+  // tenta casar pelas primeiras palavras
+  const chave=d.split(/\s+/).slice(0,2).join(' ');
+  if(S.regrasCat[chave])return S.regrasCat[chave];
+  // tenta por qualquer chave contida na descrição
+  for(const k in S.regrasCat){if(d.includes(k))return S.regrasCat[k];}
+  return '';
+}
+
+/* ── 9. Gera contas recorrentes vencidas automaticamente ── */
+function gerarRecorrentesAuto(){
+  if(CR!=='gestor'&&CR!=='operacional'&&CR!=='dona')return; // só visão completa dispara
+  let criadas=0;const hoje=new Date().toISOString().slice(0,10);
+  ['pagar','receber'].forEach(tipo=>{
+    const arr=S[tipo];
+    // pega grupos recorrentes e vê se falta gerar o próximo ciclo
+    const modelos={};
+    arr.forEach(c=>{if(c.autoRecorr&&c.freq){const k=c.autoRecorr;if(!modelos[k]||c.venc>modelos[k].venc)modelos[k]=c;}});
+    Object.values(modelos).forEach(m=>{
+      let prox=avancaDataConta(m.venc,1,m.freq);
+      // gera enquanto a próxima data já passou ou é hoje (evita acumular muitas)
+      let guard=0;
+      while(prox<=hoje&&guard<24){
+        const novo={...m,id:uid(),venc:prox,status:'aberto'};
+        delete novo.pagoEm;delete novo.recebidoEm;delete novo.valPago;delete novo.valRecebido;
+        arr.push(novo);criadas++;
+        prox=avancaDataConta(prox,1,m.freq);guard++;
+      }
+    });
+  });
+  if(criadas>0){log('Geradas '+criadas+' conta(s) recorrente(s) automaticamente');save();}
+  return criadas;
+}
+
+/* ── 12. Alertas inteligentes ── */
+function alertasInteligentes(){
+  const out=[];
+  const hoje=new Date().toISOString().slice(0,10);
+  // saldo atual consolidado
+  const saldo=S.flux.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:-e.val),0);
+  // projeção 30 dias: + a receber em aberto - a pagar em aberto no período
+  const lim=new Date();lim.setDate(lim.getDate()+30);const limISO=lim.toISOString().slice(0,10);
+  const aReceber=S.receber.filter(c=>c.status==='aberto'&&c.venc<=limISO).reduce((s,c)=>s+c.val,0);
+  const aPagar=S.pagar.filter(c=>c.status==='aberto'&&c.venc<=limISO).reduce((s,c)=>s+valorAtualizado(c),0);
+  const proj=saldo+aReceber-aPagar;
+  if(proj<0)out.push({tipo:'danger',msg:`Saldo projetado para 30 dias ficará NEGATIVO: ${money(proj)}. Reveja pagamentos ou acelere recebimentos.`});
+  else if(proj<saldo*0.2&&saldo>0)out.push({tipo:'warn',msg:`Saldo projetado em 30 dias cai para ${money(proj)} — fluxo apertado.`});
+  // contas grandes vencendo em 7 dias
+  const lim7=new Date();lim7.setDate(lim7.getDate()+7);const l7=lim7.toISOString().slice(0,10);
+  const grandes=S.pagar.filter(c=>c.status==='aberto'&&c.venc>=hoje&&c.venc<=l7).sort((a,b)=>b.val-a.val).slice(0,3);
+  grandes.forEach(c=>{if(c.val>=1000)out.push({tipo:'warn',msg:`Conta grande vencendo: ${c.forn} — ${money(c.val)} em ${fmt(c.venc)}.`});});
+  // clientes que sempre atrasam (3+ recebimentos com atraso)
+  const atrasos={};
+  S.receber.filter(c=>c.status==='recebido'&&c.recebidoEm&&c.recebidoEm>c.venc).forEach(c=>{atrasos[c.cli]=(atrasos[c.cli]||0)+1;});
+  Object.entries(atrasos).filter(([k,n])=>n>=3).forEach(([k,n])=>out.push({tipo:'info',msg:`Cliente "${k}" já atrasou ${n} pagamentos — considere cobrança antecipada.`}));
+  // total vencido a receber
+  const venc=S.receber.filter(c=>c.status==='aberto'&&days(c.venc)<0);
+  if(venc.length)out.push({tipo:'danger',msg:`${venc.length} cobrança(s) vencida(s), total ${money(venc.reduce((s,c)=>s+valorAtualizado(c),0))} a receber.`});
+  return out;
+}
+
+/* ── Funções de interface das automações ── */
+function lerBoletoPagar(){
+  const raw=v('pg_boleto');if(!raw.trim()){alert('Cole a linha digitável do boleto primeiro.');return;}
+  const r=parseLinhaDigitavel(raw);
+  if(!r.ok){alert('Não reconheci o boleto. A linha digitável deve ter 47 dígitos (boleto bancário) ou 48 (concessionária).');return;}
+  if(r.val){const el=document.getElementById('pg_val');if(el)el.value=r.val.toFixed(2);}
+  if(r.venc){const el=document.getElementById('pg_venc');if(el)el.value=toBR(r.venc);}
+  let msg='Boleto lido!';
+  if(r.val)msg+=' Valor: '+money(r.val)+'.';else msg+=' (valor não detectado, preencha manualmente).';
+  if(r.venc)msg+=' Vencimento: '+fmt(r.venc)+'.';
+  alert(msg);
+}
+async function buscarCNPJPagar(){
+  const c=v('pg_cnpj');if(!c.trim()){alert('Digite o CNPJ.');return;}
+  const btn=event&&event.target;if(btn)btn.textContent='...';
+  const r=await buscarCNPJ(c);
+  if(btn)btn.textContent='🔎 CNPJ';
+  if(!r.ok){alert(r.erro||'Não encontrado.');return;}
+  document.getElementById('pg_forn').value=r.nome;
+  document.getElementById('pg_cnpj').value=fmtCNPJ(r.cnpj);
+}
+async function buscarCNPJReceber(){
+  const c=v('rc_cnpj');if(!c.trim()){alert('Digite o CNPJ.');return;}
+  const btn=event&&event.target;if(btn)btn.textContent='...';
+  const r=await buscarCNPJ(c);
+  if(btn)btn.textContent='🔎 CNPJ';
+  if(!r.ok){alert(r.erro||'Não encontrado.');return;}
+  document.getElementById('rc_cli').value=r.nome;
+  document.getElementById('rc_cnpj').value=fmtCNPJ(r.cnpj);
+}
+/* sugere categoria ao digitar a descrição (sem sobrescrever escolha manual) */
+function autoCat(prefixo){
+  const desc=v(prefixo+'_desc');if(!desc||desc.length<3)return;
+  const sug=sugereCategoria(desc);if(!sug)return;
+  const sel=document.getElementById(prefixo+'_cat');if(!sel)return;
+  // só preenche se ainda não houver escolha consciente (primeira opção)
+  if(sel.selectedIndex<=0){const op=[...sel.options].find(o=>o.value===sug);if(op)sel.value=sug;}
+}
+/* importa XML de NF e preenche o formulário de conta a pagar */
+function importarNF(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const nf=parseNFXML(ev.target.result);
+    if(!nf.ok){alert('Não consegui ler os dados da nota neste XML. Verifique se é um XML de NF-e ou NFS-e válido.');e.target.value='';return;}
+    document.getElementById('pg_forn').value=nf.nome;
+    if(nf.val){const el=document.getElementById('pg_val');if(el)el.value=nf.val.toFixed(2);}
+    if(nf.venc){const el=document.getElementById('pg_venc');if(el)el.value=toBR(nf.venc);}
+    const dsc=document.getElementById('pg_desc');if(dsc)dsc.value='NF '+(nf.num||'')+' - '+nf.nome;
+    autoCat('pg');
+    e.target.value='';
+    alert('Nota importada! Confira os dados preenchidos no formulário e clique em Adicionar.');
+  };
+  r.readAsText(f,'utf-8');
+}
+
 /* ════════ CONTAS A RECEBER ════════ */
 function addReceber(){
   const cli=v('rc_cli').trim(),venc=vData('rc_venc'),desc=v('rc_desc').trim(),cat=v('rc_cat'),val=parseFloat(v('rc_val'));
@@ -1221,12 +1449,14 @@ function addReceber(){
   if(!venc){alert('Informe o vencimento.');return;}
   if(!val||val<=0){alert('Informe um valor válido.');return;}
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
+  const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
     const vdt=n>1?avancaDataConta(venc,i,recorr):venc;
-    S.receber.push({id:uid(),cli,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,by:CU,t:new Date().toISOString()});
+    S.receber.push({id:uid(),cli,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,autoRecorr,freq:recorr!=='unica'?recorr:null,by:CU,t:new Date().toISOString()});
   }
+  if(cat&&desc)aprdCategoria(desc,cat); // aprende categoria
   log('Adicionou conta a receber: '+cli+' ('+money(val)+(n>1?' x'+n:'')+')');save();
-  clr('rc_cli','rc_venc','rc_desc','rc_val','rc_cc','rc_juros','rc_multa');renderReceber();
+  clr('rc_cli','rc_cnpj','rc_venc','rc_desc','rc_val','rc_cc','rc_juros','rc_multa');renderReceber();
 }
 function receberConta(id){
   const c=S.receber.find(x=>x.id===id);if(!c)return;
@@ -1277,12 +1507,14 @@ function addPagar(){
   if(!venc){alert('Informe o vencimento.');return;}
   if(!val||val<=0){alert('Informe um valor válido.');return;}
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
+  const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
     const vdt=n>1?avancaDataConta(venc,i,recorr):venc;
-    S.pagar.push({id:uid(),forn,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,by:CU,t:new Date().toISOString()});
+    S.pagar.push({id:uid(),forn,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,autoRecorr,freq:recorr!=='unica'?recorr:null,by:CU,t:new Date().toISOString()});
   }
+  if(cat&&desc)aprdCategoria(desc,cat); // aprende categoria
   log('Adicionou conta a pagar: '+forn+' ('+money(val)+(n>1?' x'+n:'')+')');save();
-  clr('pg_forn','pg_venc','pg_desc','pg_val','pg_cc','pg_juros','pg_multa');renderPagar();
+  clr('pg_forn','pg_cnpj','pg_boleto','pg_venc','pg_desc','pg_val','pg_cc','pg_juros','pg_multa');renderPagar();
 }
 function pagarConta(id){
   const c=S.pagar.find(x=>x.id===id);if(!c)return;
@@ -1932,8 +2164,8 @@ function importSelecionados(){
 /* ── RENDER ALL ── */
 /* ════════ CONTAS PAGAS E RECEBIDAS ════════ */
 function movimentacoesPeriodo(per){
-  const pagas=S.pagar.filter(c=>c.status==='pago').map(c=>({kind:'pago',nome:c.forn,desc:c.desc,val:c.val,d:(c.pagoEm||c.venc),cat:c.cat||''}));
-  const recs=S.receber.filter(c=>c.status==='recebido').map(c=>({kind:'recebido',nome:c.cli,desc:c.desc,val:c.val,d:(c.recebidoEm||c.venc),cat:c.cat||''}));
+  const pagas=S.pagar.filter(c=>c.status==='pago').map(c=>({kind:'pago',nome:c.forn,desc:c.desc,val:(c.valPago||c.val),d:(c.pagoEm||c.venc),cat:c.cat||'',cc:c.cc||''}));
+  const recs=S.receber.filter(c=>c.status==='recebido').map(c=>({kind:'recebido',nome:c.cli,desc:c.desc,val:(c.valRecebido||c.val),d:(c.recebidoEm||c.venc),cat:c.cat||'',cc:c.cc||''}));
   return fpd([...pagas,...recs],'d',per);
 }
 let PAGAS_CACHE=[];
@@ -1953,16 +2185,83 @@ function renderPagas(){
    +met('Movimentações',list.length,'var(--text)');
   document.getElementById('pagasTable').innerHTML=list.length?list.map(c=>{
     const isRec=c.kind==='recebido';
-    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.nome)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''} · ${isRec?'recebido':'pago'} em ${fmt(c.d)}</div></div><div class="rright"><span class="badge ${isRec?'bok':'bdanger'}">${isRec?'↑ Recebido':'↓ Pago'}</span><span style="font-weight:600;color:${isRec?'var(--nipi)':'var(--peace)'}">${isRec?'+':'−'} ${money(c.val)}</span></div></div>`;
+    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.nome)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''}${c.cc?' · 🏷 '+esc(c.cc):''} · ${isRec?'recebido':'pago'} em ${fmt(c.d)}</div></div><div class="rright"><span class="badge ${isRec?'bok':'bdanger'}">${isRec?'↑ Recebido':'↓ Pago'}</span><span style="font-weight:600;color:${isRec?'var(--nipi)':'var(--peace)'}">${isRec?'+':'−'} ${money(c.val)}</span></div></div>`;
   }).join(''):'<div class="empty">Nenhuma movimentação no período</div>';
 }
 function exportPagasCSV(){
   if(!PAGAS_CACHE.length){alert('Nada para exportar no período.');return;}
-  const rows=[['Data','Nome','Descrição','Categoria','Tipo','Valor']];
-  PAGAS_CACHE.forEach(c=>rows.push([c.d,c.nome,c.desc||'',c.cat||'',c.kind==='recebido'?'Recebido':'Pago',String(c.val).replace('.',',')]));
+  const rows=[['Data','Nome','Descrição','Categoria','Centro de custo','Tipo','Valor']];
+  PAGAS_CACHE.forEach(c=>rows.push([c.d,c.nome,c.desc||'',c.cat||'',c.cc||'',c.kind==='recebido'?'Recebido':'Pago',String(c.val.toFixed(2)).replace('.',',')]));
   const csv='\uFEFF'+rows.map(r=>r.map(x=>`"${(x||'').toString().replace(/"/g,'""')}"`).join(';')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download='contas_pagas_recebidas.csv';a.click();
+}
+/* gera um documento de impressão/PDF limpo, com cabeçalho NIPI */
+function imprimirPagas(modo){
+  const per=v('pagas_per')||'mes';const q=v('pagas_q');
+  const perLabel={mes:'Mês atual',trim:'Trimestre',ano:'Ano',tudo:'Todo o período'}[per]||per;
+  let list=movimentacoesPeriodo(per);
+  if(modo!=='todos')list=list.filter(c=>c.kind===modo);
+  if(q)list=list.filter(c=>inc(c.nome,q)||inc(c.desc,q)||inc(c.cat,q));
+  list.sort((a,b)=>a.d.localeCompare(b.d));
+  if(!list.length){alert('Nada para imprimir neste período/filtro.');return;}
+  const titulo={todos:'Movimento — Entradas e Saídas',recebido:'Contas Recebidas',pago:'Contas Pagas'}[modo];
+  const totPago=list.filter(c=>c.kind==='pago').reduce((s,c)=>s+c.val,0);
+  const totRec=list.filter(c=>c.kind==='recebido').reduce((s,c)=>s+c.val,0);
+  const linhas=list.map(c=>{
+    const isRec=c.kind==='recebido';
+    return `<tr>
+      <td>${fmt(c.d)}</td>
+      <td>${esc(c.nome)}</td>
+      <td>${esc(c.desc||'')}</td>
+      <td>${esc(c.cat||'')}</td>
+      <td>${esc(c.cc||'')}</td>
+      <td class="t">${isRec?'Recebido':'Pago'}</td>
+      <td class="v" style="color:${isRec?'#1A5C1A':'#A32D2D'}">${isRec?'+':'−'} ${money(c.val)}</td>
+    </tr>`;
+  }).join('');
+  let resumo='';
+  if(modo==='todos')resumo=`<div class="resumo"><span>Total recebido: <b style="color:#1A5C1A">${money(totRec)}</b></span><span>Total pago: <b style="color:#A32D2D">${money(totPago)}</b></span><span>Saldo do período: <b>${money(totRec-totPago)}</b></span></div>`;
+  else if(modo==='recebido')resumo=`<div class="resumo"><span>Total recebido: <b style="color:#1A5C1A">${money(totRec)}</b></span><span>${list.length} conta(s)</span></div>`;
+  else resumo=`<div class="resumo"><span>Total pago: <b style="color:#A32D2D">${money(totPago)}</b></span><span>${list.length} conta(s)</span></div>`;
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo}</title>
+  <style>
+    @page{size:A4;margin:14mm}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;color:#13343B;font-size:12px}
+    .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0D434E;padding-bottom:12px;margin-bottom:6px}
+    .hd .badge{display:inline-flex;align-items:center;gap:8px;font-size:20px;font-weight:bold;color:#0D434E}
+    .hd .badge span{background:#1D9E75;color:#fff;border-radius:6px;padding:4px 8px;font-size:13px}
+    .hd .meta{text-align:right;font-size:11px;color:#5A6B70;line-height:1.6}
+    h1{font-size:17px;color:#0D434E;margin:14px 0 2px}
+    .sub{color:#5A6B70;font-size:11px;margin-bottom:10px}
+    .resumo{display:flex;gap:24px;background:#F4F6F8;border:1px solid #e0e6e9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th{background:#0D434E;color:#fff;text-align:left;padding:7px 8px;font-size:11px}
+    th.v,td.v{text-align:right;white-space:nowrap}
+    th.t,td.t{text-align:center}
+    td{padding:6px 8px;border-bottom:1px solid #e8ecee}
+    tr:nth-child(even) td{background:#F8FAFB}
+    .ft{margin-top:20px;text-align:center;color:#93A1A5;font-size:10px;border-top:1px solid #e0e6e9;padding-top:10px}
+  </style></head><body>
+    <div class="hd">
+      <div><div class="badge"><span>AT</span> Auricélia Transportes</div></div>
+      <div class="meta">Central Financeira<br>Emitido em ${toBR(new Date().toISOString().slice(0,10))} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br>por ${esc(CU||'')}</div>
+    </div>
+    <h1>${titulo}</h1>
+    <div class="sub">Período: ${perLabel}${q?' · Filtro: "'+esc(q)+'"':''}</div>
+    ${resumo}
+    <table>
+      <thead><tr><th>Data</th><th>Nome</th><th>Descrição</th><th>Categoria</th><th>Centro custo</th><th class="t">Tipo</th><th class="v">Valor</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div class="ft">Sistema desenvolvido por NIPI — Núcleo Internacional de Políticas Inovadoras</div>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Permita pop-ups para gerar o relatório.');return;}
+  w.document.write(html);w.document.close();
+  w.onload=()=>{w.focus();w.print();};
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},400);
 }
 
 /* ════════ RELATÓRIOS POR PERÍODO ════════ */
@@ -2047,7 +2346,8 @@ Object.assign(window,{
   setUserCaixa,setUserField,sp,toggleUserMod,updateDcfPreview,zerarDadosFinanceiros,
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
-  openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar
+  openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
+  lerBoletoPagar,buscarCNPJPagar,buscarCNPJReceber,autoCat,importarNF,imprimirPagas
 });
 
 /* ── INIT ── */
