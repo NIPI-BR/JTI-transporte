@@ -282,6 +282,11 @@ textarea{resize:vertical;min-height:60px}
       <div id="page-receber" class="page">
         <div class="ptitle">Contas a Receber</div>
         <div class="psub">Entradas previstas — clientes e recebimentos futuros.</div>
+        <div class="filter-bar">
+          <span style="font-size:12px;color:var(--t3);align-self:center">Exportar em PDF:</span>
+          <select id="rcAbertoPer" style="width:auto"><option value="tudo">Todos os vencimentos</option><option value="mes">Vencem este mês</option><optgroup label="Mês específico" id="rc_meses"></optgroup></select>
+          <button class="btn btnsm" onclick="imprimirContasAbertas('receber')">🖨 Gerar PDF</button>
+        </div>
         <div id="recKpis" class="g3"></div>
         <div class="card">
           <div class="ctitle">Nova conta a receber</div>
@@ -309,6 +314,11 @@ textarea{resize:vertical;min-height:60px}
       <div id="page-pagar" class="page">
         <div class="ptitle">Contas a Pagar</div>
         <div class="psub">Obrigações e despesas previstas.</div>
+        <div class="filter-bar">
+          <span style="font-size:12px;color:var(--t3);align-self:center">Exportar em PDF:</span>
+          <select id="pgAbertoPer" style="width:auto"><option value="tudo">Todos os vencimentos</option><option value="mes">Vencem este mês</option><optgroup label="Mês específico" id="pg_meses"></optgroup></select>
+          <button class="btn btnsm" onclick="imprimirContasAbertas('pagar')">🖨 Gerar PDF</button>
+        </div>
         <div id="payKpis" class="g3"></div>
         <div class="card">
           <div class="ctitle">Nova conta a pagar</div>
@@ -485,7 +495,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="ptitle">Contas Pagas e Recebidas</div>
         <div class="psub">Relatório do que já foi pago e recebido no período.</div>
         <div class="filter-bar">
-          <select id="pagas_per" onchange="renderPagas()" style="width:auto"><option value="mes">Mês atual</option><option value="trim">Trimestre</option><option value="ano">Ano</option><option value="tudo">Tudo</option></select>
+          <select id="pagas_per" onchange="renderPagas()" style="width:auto"><option value="mes">Mês atual</option><option value="trim">Trimestre</option><option value="ano">Ano</option><option value="tudo">Tudo</option><optgroup label="Mês específico" id="pagas_meses"></optgroup></select>
           <select id="pagas_tipo" onchange="renderPagas()" style="width:auto"><option value="todos">Movimento (entradas + saídas)</option><option value="recebido">Só contas recebidas</option><option value="pago">Só contas pagas</option></select>
           <input id="pagas_q" placeholder="🔍 Buscar..." oninput="renderPagas()" style="width:auto">
         </div>
@@ -1478,6 +1488,7 @@ function cobrar(id){
   alert('Mensagem de cobrança copiada:\n\n'+msg);
 }
 function renderReceber(){
+  const mg=document.getElementById('rc_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
   const sel=document.getElementById('rc_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_ENTRADA_(),cur);}
   renderCCList();
   const abertos=S.receber.filter(c=>c.status==='aberto');
@@ -1525,6 +1536,7 @@ function pagarConta(id){
 }
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;if(!confirm('Remover?'))return;S.pagar=S.pagar.filter(x=>x.id!==id);log('Removeu conta a pagar: '+c.forn);save();renderPagar();}
 function renderPagar(){
+  const mg=document.getElementById('pg_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
   const sel=document.getElementById('pg_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_SAIDA_(),cur);}
   renderCCList();
   const abertos=S.pagar.filter(c=>c.status==='aberto');
@@ -1824,7 +1836,26 @@ function fpd(lista,campo,per){
   if(per==='mes')return lista.filter(l=>l[campo].startsWith(now.toISOString().slice(0,7)));
   if(per==='trim'){const t=Math.floor(now.getMonth()/3)*3;return lista.filter(l=>{const m=parseInt(l[campo].slice(5,7))-1;return l[campo].startsWith(String(now.getFullYear()))&&m>=t&&m<=t+2});}
   if(per==='ano')return lista.filter(l=>l[campo].startsWith(String(now.getFullYear())));
+  // mês específico no formato YYYY-MM
+  if(/^\d{4}-\d{2}$/.test(per))return lista.filter(l=>l[campo]&&l[campo].startsWith(per));
   return lista;
+}
+/* rótulo amigável do período (aceita mes/trim/ano/tudo ou YYYY-MM) */
+function labelPeriodo(per){
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  if(/^\d{4}-\d{2}$/.test(per)){const[y,m]=per.split('-');return meses[parseInt(m)-1]+'/'+y;}
+  return {mes:'Mês atual',trim:'Trimestre',ano:'Ano',tudo:'Todo o período'}[per]||per;
+}
+/* gera as opções <option> dos últimos 18 meses para selects de período mensal */
+function opcoesMeses(){
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  let out='';const now=new Date();
+  for(let i=0;i<18;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val=d.toISOString().slice(0,7);
+    out+=`<option value="${val}">${meses[d.getMonth()]}/${d.getFullYear()}</option>`;
+  }
+  return out;
 }
 
 /* ── DRE: lançar custo fixo / operacional ── */
@@ -2170,6 +2201,7 @@ function movimentacoesPeriodo(per){
 }
 let PAGAS_CACHE=[];
 function renderPagas(){
+  const mg=document.getElementById('pagas_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
   const per=v('pagas_per')||'mes';const q=v('pagas_q');const tp=v('pagas_tipo')||'todos';
   let list=movimentacoesPeriodo(per);
   if(tp!=='todos')list=list.filter(c=>c.kind===tp);
@@ -2199,7 +2231,7 @@ function exportPagasCSV(){
 /* gera um documento de impressão/PDF limpo, com cabeçalho NIPI */
 function imprimirPagas(modo){
   const per=v('pagas_per')||'mes';const q=v('pagas_q');
-  const perLabel={mes:'Mês atual',trim:'Trimestre',ano:'Ano',tudo:'Todo o período'}[per]||per;
+  const perLabel=labelPeriodo(per);
   let list=movimentacoesPeriodo(per);
   if(modo!=='todos')list=list.filter(c=>c.kind===modo);
   if(q)list=list.filter(c=>inc(c.nome,q)||inc(c.desc,q)||inc(c.cat,q));
@@ -2264,7 +2296,81 @@ function imprimirPagas(modo){
   setTimeout(()=>{try{w.focus();w.print();}catch(e){}},400);
 }
 
-/* ════════ RELATÓRIOS POR PERÍODO ════════ */
+/* documento PDF reutilizável: cabeçalho NIPI + resumo + tabela */
+function abrirDocPDF(titulo,subtitulo,resumoHTML,cabecalhos,linhasHTML){
+  const ths=cabecalhos.map(h=>`<th class="${h.cls||''}">${h.txt}</th>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo}</title>
+  <style>
+    @page{size:A4;margin:14mm}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;color:#13343B;font-size:12px}
+    .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0D434E;padding-bottom:12px;margin-bottom:6px}
+    .hd .badge{display:inline-flex;align-items:center;gap:8px;font-size:20px;font-weight:bold;color:#0D434E}
+    .hd .badge span{background:#1D9E75;color:#fff;border-radius:6px;padding:4px 8px;font-size:13px}
+    .hd .meta{text-align:right;font-size:11px;color:#5A6B70;line-height:1.6}
+    h1{font-size:17px;color:#0D434E;margin:14px 0 2px}
+    .sub{color:#5A6B70;font-size:11px;margin-bottom:10px}
+    .resumo{display:flex;gap:24px;background:#F4F6F8;border:1px solid #e0e6e9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;flex-wrap:wrap}
+    table{width:100%;border-collapse:collapse}
+    th{background:#0D434E;color:#fff;text-align:left;padding:7px 8px;font-size:11px}
+    th.v,td.v{text-align:right;white-space:nowrap}
+    th.t,td.t{text-align:center}
+    td{padding:6px 8px;border-bottom:1px solid #e8ecee}
+    tr:nth-child(even) td{background:#F8FAFB}
+    .ft{margin-top:20px;text-align:center;color:#93A1A5;font-size:10px;border-top:1px solid #e0e6e9;padding-top:10px}
+  </style></head><body>
+    <div class="hd">
+      <div><div class="badge"><span>AT</span> Auricélia Transportes</div></div>
+      <div class="meta">Central Financeira<br>Emitido em ${toBR(new Date().toISOString().slice(0,10))} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br>por ${esc(CU||'')}</div>
+    </div>
+    <h1>${titulo}</h1>
+    <div class="sub">${subtitulo}</div>
+    ${resumoHTML||''}
+    <table><thead><tr>${ths}</tr></thead><tbody>${linhasHTML}</tbody></table>
+    <div class="ft">Sistema desenvolvido por NIPI — Núcleo Internacional de Políticas Inovadoras</div>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Permita pop-ups para gerar o relatório.');return;}
+  w.document.write(html);w.document.close();
+  w.onload=()=>{w.focus();w.print();};
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},400);
+}
+
+/* imprime contas EM ABERTO (a pagar ou a receber), filtradas por período de vencimento */
+function imprimirContasAbertas(tipo){
+  const selId=tipo==='pagar'?'pgAbertoPer':'rcAbertoPer';
+  const per=v(selId)||'tudo';
+  const arr=(tipo==='pagar'?S.pagar:S.receber).filter(c=>c.status==='aberto');
+  const list=fpd(arr,'venc',per).sort((a,b)=>a.venc.localeCompare(b.venc));
+  if(!list.length){alert('Nenhuma conta em aberto neste período.');return;}
+  const titulo=tipo==='pagar'?'Contas a Pagar (em aberto)':'Contas a Receber (em aberto)';
+  const nomeCol=tipo==='pagar'?'Fornecedor':'Cliente';
+  const cor=tipo==='pagar'?'#A32D2D':'#1A5C1A';
+  const tot=list.reduce((s,c)=>s+c.val,0);
+  const totAtual=list.reduce((s,c)=>s+valorAtualizado(c),0);
+  const vencidas=list.filter(c=>days(c.venc)<0);
+  const linhas=list.map(c=>{
+    const d=days(c.venc);const st=d<0?`Vencida (${Math.abs(d)}d)`:d===0?'Vence hoje':`${d} dia(s)`;
+    const acr=acrescimo(c);
+    return `<tr>
+      <td>${fmt(c.venc)}</td>
+      <td>${esc(tipo==='pagar'?c.forn:c.cli)}</td>
+      <td>${esc(c.desc||'')}</td>
+      <td>${esc(c.cat||'')}</td>
+      <td>${esc(c.cc||'')}</td>
+      <td class="t">${st}</td>
+      <td class="v" style="color:${cor}">${money(c.val)}${acr>0?' <span style="color:#93A1A5">(+'+money(acr)+')</span>':''}</td>
+    </tr>`;
+  }).join('');
+  const resumo=`<div class="resumo">
+    <span>Total em aberto: <b style="color:${cor}">${money(tot)}</b></span>
+    ${totAtual>tot?`<span>Com juros/multa: <b>${money(totAtual)}</b></span>`:''}
+    <span>${list.length} conta(s)</span>
+    ${vencidas.length?`<span>Vencidas: <b style="color:#A32D2D">${vencidas.length}</b></span>`:''}
+  </div>`;
+  const cab=[{txt:'Vencimento'},{txt:nomeCol},{txt:'Descrição'},{txt:'Categoria'},{txt:'Centro custo'},{txt:'Situação',cls:'t'},{txt:'Valor',cls:'v'}];
+  abrirDocPDF(titulo,'Período de vencimento: '+labelPeriodo(per),resumo,cab,linhas);
+}
 let REL_CACHE=null;
 function renderRelCaixaSelect(){
   const el=document.getElementById('rel_caixa');if(!el)return;
@@ -2347,7 +2453,8 @@ Object.assign(window,{
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
   openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
-  lerBoletoPagar,buscarCNPJPagar,buscarCNPJReceber,autoCat,importarNF,imprimirPagas
+  lerBoletoPagar,buscarCNPJPagar,buscarCNPJReceber,autoCat,importarNF,imprimirPagas,
+  imprimirContasAbertas
 });
 
 /* ── INIT ── */
