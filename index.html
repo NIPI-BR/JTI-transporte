@@ -492,19 +492,19 @@ textarea{resize:vertical;min-height:60px}
 
       <!-- CONTAS PAGAS -->
       <div id="page-pagas" class="page">
-        <div class="ptitle">Contas Pagas e Recebidas</div>
-        <div class="psub">Relatório do que já foi pago e recebido no período.</div>
+        <div class="ptitle">Movimento — Pagas e Recebidas</div>
+        <div class="psub">Tudo que entrou e saiu no período, incluindo conciliação bancária, recebimentos e pagamentos.</div>
         <div class="filter-bar">
           <select id="pagas_per" onchange="renderPagas()" style="width:auto"><option value="mes">Mês atual</option><option value="trim">Trimestre</option><option value="ano">Ano</option><option value="tudo">Tudo</option><optgroup label="Mês específico" id="pagas_meses"></optgroup></select>
-          <select id="pagas_tipo" onchange="renderPagas()" style="width:auto"><option value="todos">Movimento (entradas + saídas)</option><option value="recebido">Só contas recebidas</option><option value="pago">Só contas pagas</option></select>
+          <select id="pagas_tipo" onchange="renderPagas()" style="width:auto"><option value="todos">Movimento (entradas + saídas)</option><option value="recebido">Só entradas (recebido)</option><option value="pago">Só saídas (pago)</option></select>
           <input id="pagas_q" placeholder="🔍 Buscar..." oninput="renderPagas()" style="width:auto">
         </div>
         <div class="filter-bar" style="margin-top:-4px">
           <span style="font-size:12px;color:var(--t3);align-self:center">Exportar / imprimir:</span>
           <button class="btn btnsm" onclick="exportPagasCSV()">⬇ CSV (visão atual)</button>
           <button class="btn btnsm" onclick="imprimirPagas('todos')">🖨 Movimento</button>
-          <button class="btn btnsm" onclick="imprimirPagas('recebido')">🖨 Recebidas</button>
-          <button class="btn btnsm" onclick="imprimirPagas('pago')">🖨 Pagas</button>
+          <button class="btn btnsm" onclick="imprimirPagas('recebido')">🖨 Só entradas</button>
+          <button class="btn btnsm" onclick="imprimirPagas('pago')">🖨 Só saídas</button>
         </div>
         <div id="pagasKpis" class="g4"></div>
         <div class="card"><div class="ctitle">Movimentações realizadas</div><div id="pagasTable"><div class="empty">Nenhuma movimentação no período</div></div></div>
@@ -944,7 +944,7 @@ const NAV=[
   {id:'fluxo',l:'Fluxo de Caixa',dot:'var(--gr)',sec:'Operação'},
   {id:'receber',l:'Contas a Receber',dot:'var(--nipi)',sec:''},
   {id:'pagar',l:'Contas a Pagar',dot:'var(--peace)',sec:''},
-  {id:'pagas',l:'Pagas / Recebidas',dot:'var(--nipi)',sec:''},
+  {id:'pagas',l:'Movimento (Pagas/Receb.)',dot:'var(--nipi)',sec:''},
   {id:'boletos',l:'Boletos',dot:'var(--com)',sec:''},
   {id:'dre',l:'DRE Operacional',dot:'var(--ment)',sec:'Análise'},
   {id:'placas',l:'Por Placa',dot:'var(--gr)',sec:''},
@@ -2195,9 +2195,27 @@ function importSelecionados(){
 /* ── RENDER ALL ── */
 /* ════════ CONTAS PAGAS E RECEBIDAS ════════ */
 function movimentacoesPeriodo(per){
-  const pagas=S.pagar.filter(c=>c.status==='pago').map(c=>({kind:'pago',nome:c.forn,desc:c.desc,val:(c.valPago||c.val),d:(c.pagoEm||c.venc),cat:c.cat||'',cc:c.cc||''}));
-  const recs=S.receber.filter(c=>c.status==='recebido').map(c=>({kind:'recebido',nome:c.cli,desc:c.desc,val:(c.valRecebido||c.val),d:(c.recebidoEm||c.venc),cat:c.cat||'',cc:c.cc||''}));
-  return fpd([...pagas,...recs],'d',per);
+  // Baseia-se no FLUXO DE CAIXA, que já contém tudo: conciliação bancária,
+  // recebimentos/pagamentos de contas, boletos e lançamentos manuais.
+  // Assim nada duplica e a conciliação aparece no relatório.
+  let base=S.flux;
+  // respeita o filtro de caixa da visão completa, se houver
+  if(isFull()&&typeof CAIXA_FILTER!=='undefined'){
+    if(CAIXA_FILTER==='__none__')base=base.filter(e=>!e.caixaId);
+    else if(CAIXA_FILTER&&CAIXA_FILTER!=='__all__')base=base.filter(e=>e.caixaId===CAIXA_FILTER);
+  }else if(!isFull()){
+    base=base.filter(e=>e.byId===CUID);
+  }
+  const movs=base.map(e=>({
+    kind:e.tipo==='entrada'?'recebido':'pago',
+    nome:e.desc||'—',
+    desc:'',
+    val:e.val,
+    d:e.d,
+    cat:e.cat||'',
+    cc:e.cc||''
+  }));
+  return fpd(movs,'d',per);
 }
 let PAGAS_CACHE=[];
 function renderPagas(){
@@ -2211,13 +2229,13 @@ function renderPagas(){
   const totPago=list.filter(c=>c.kind==='pago').reduce((s,c)=>s+c.val,0);
   const totRec=list.filter(c=>c.kind==='recebido').reduce((s,c)=>s+c.val,0);
   document.getElementById('pagasKpis').innerHTML=
-    met('Total recebido',money(totRec),'var(--nipi)',list.filter(c=>c.kind==='recebido').length+' conta(s)')
-   +met('Total pago',money(totPago),'var(--peace)',list.filter(c=>c.kind==='pago').length+' conta(s)')
+    met('Total entradas',money(totRec),'var(--nipi)',list.filter(c=>c.kind==='recebido').length+' lanç.')
+   +met('Total saídas',money(totPago),'var(--peace)',list.filter(c=>c.kind==='pago').length+' lanç.')
    +met('Saldo do período',money(totRec-totPago),(totRec-totPago)>=0?'var(--nipi)':'var(--peace)')
    +met('Movimentações',list.length,'var(--text)');
   document.getElementById('pagasTable').innerHTML=list.length?list.map(c=>{
     const isRec=c.kind==='recebido';
-    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.nome)}</div><div class="rsub">${esc(c.desc||'')}${c.cat?' · '+esc(c.cat):''}${c.cc?' · 🏷 '+esc(c.cc):''} · ${isRec?'recebido':'pago'} em ${fmt(c.d)}</div></div><div class="rright"><span class="badge ${isRec?'bok':'bdanger'}">${isRec?'↑ Recebido':'↓ Pago'}</span><span style="font-weight:600;color:${isRec?'var(--nipi)':'var(--peace)'}">${isRec?'+':'−'} ${money(c.val)}</span></div></div>`;
+    return`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(c.nome)}</div><div class="rsub">${c.cat?esc(c.cat):''}${c.cc?' · 🏷 '+esc(c.cc):''} · ${fmt(c.d)}</div></div><div class="rright"><span class="badge ${isRec?'bok':'bdanger'}">${isRec?'↑ Entrada':'↓ Saída'}</span><span style="font-weight:600;color:${isRec?'var(--nipi)':'var(--peace)'}">${isRec?'+':'−'} ${money(c.val)}</span></div></div>`;
   }).join(''):'<div class="empty">Nenhuma movimentação no período</div>';
 }
 function exportPagasCSV(){
@@ -2237,7 +2255,7 @@ function imprimirPagas(modo){
   if(q)list=list.filter(c=>inc(c.nome,q)||inc(c.desc,q)||inc(c.cat,q));
   list.sort((a,b)=>a.d.localeCompare(b.d));
   if(!list.length){alert('Nada para imprimir neste período/filtro.');return;}
-  const titulo={todos:'Movimento — Entradas e Saídas',recebido:'Contas Recebidas',pago:'Contas Pagas'}[modo];
+  const titulo={todos:'Movimento — Entradas e Saídas',recebido:'Entradas (Recebimentos)',pago:'Saídas (Pagamentos)'}[modo];
   const totPago=list.filter(c=>c.kind==='pago').reduce((s,c)=>s+c.val,0);
   const totRec=list.filter(c=>c.kind==='recebido').reduce((s,c)=>s+c.val,0);
   const linhas=list.map(c=>{
