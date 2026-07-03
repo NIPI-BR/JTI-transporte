@@ -522,15 +522,21 @@ textarea{resize:vertical;min-height:60px}
               <div class="mf" style="flex:1;gap:3px"><label style="font-size:11px;color:var(--t2)">Até</label><input type="text" id="rel_ate" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
               <div class="mf" style="flex:1;gap:3px"><label style="font-size:11px;color:var(--t2)">Caixa</label><select id="rel_caixa"></select></div>
             </div>
+            <div class="ir">
+              <div class="mf" style="flex:1;gap:3px"><label style="font-size:11px;color:var(--t2)">Tipo de relatório</label>
+                <select id="rel_tipo">
+                  <option value="movimento">Movimento (entradas e saídas)</option>
+                  <option value="recebido">Contas recebidas (entradas)</option>
+                  <option value="pago">Contas pagas (saídas)</option>
+                  <option value="avencer_pagar">Contas a vencer (a pagar em aberto)</option>
+                  <option value="avencer_receber">Contas a receber em aberto</option>
+                </select>
+              </div>
+            </div>
             <div style="display:flex;gap:7px;flex-wrap:wrap">
               <button class="btn btnp" onclick="gerarRelatorio()">Gerar relatório</button>
               <button class="btn" onclick="exportRelatorioCSV()">⬇ Exportar CSV</button>
-            </div>
-            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:2px">
-              <span style="font-size:12px;color:var(--t3);align-self:center">PDF por período:</span>
-              <button class="btn btnsm" onclick="imprimirRelatorio('todos')">🖨 Movimento completo</button>
-              <button class="btn btnsm" onclick="imprimirRelatorio('entrada')">🖨 Só recebimentos</button>
-              <button class="btn btnsm" onclick="imprimirRelatorio('saida')">🖨 Só pagamentos</button>
+              <button class="btn btnsm" onclick="imprimirRelatorioTipo()">🖨 Exportar PDF</button>
             </div>
           </div>
         </div>
@@ -2405,18 +2411,38 @@ function renderRelCaixaSelect(){
   if(de&&!de.value){const n=new Date();de.value=toBR(new Date(n.getFullYear(),n.getMonth(),1).toISOString().slice(0,10));}
   if(ate&&!ate.value)ate.value=hojeBR();
 }
+/* retorna os itens do relatório conforme tipo, período e caixa
+   itens padronizados: {d, desc, cat, cc, caixaId, tipo:'entrada'|'saida', val, situacao} */
+function dadosRelatorio(tipo,de,ate,cx){
+  const noCaixa=(item)=>{
+    if(cx==='__none__')return !item.caixaId;
+    if(cx)return item.caixaId===cx;
+    return true;
+  };
+  if(tipo==='avencer_pagar'||tipo==='avencer_receber'){
+    const fonte=tipo==='avencer_pagar'?S.pagar:S.receber;
+    return fonte.filter(c=>c.status==='aberto'&&c.venc>=de&&c.venc<=ate&&noCaixa(c))
+      .map(c=>({d:c.venc,desc:(tipo==='avencer_pagar'?c.forn:c.cli)+(c.desc?' — '+c.desc:''),cat:c.cat||'',cc:c.cc||'',caixaId:c.caixaId||'',
+        tipo:tipo==='avencer_pagar'?'saida':'entrada',val:c.val,situacao:days(c.venc)<0?'Vencida':'A vencer'}));
+  }
+  // movimento/recebido/pago: base é o fluxo (inclui conciliação)
+  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate&&noCaixa(e));
+  if(tipo==='recebido')ls=ls.filter(e=>e.tipo==='entrada');
+  else if(tipo==='pago')ls=ls.filter(e=>e.tipo==='saida');
+  return ls.map(e=>({d:e.d,desc:e.desc,cat:e.cat||'',cc:e.cc||'',caixaId:e.caixaId||'',tipo:e.tipo,val:e.val,situacao:''}));
+}
+const REL_TIPO_LABEL={movimento:'Movimento (entradas e saídas)',recebido:'Contas recebidas (entradas)',pago:'Contas pagas (saídas)',avencer_pagar:'Contas a vencer (a pagar)',avencer_receber:'Contas a receber em aberto'};
 function gerarRelatorio(){
   const de=vData('rel_de'),ate=vData('rel_ate');
   if(!de||!ate){alert('Informe as duas datas.');return;}
   if(de>ate){alert('A data inicial deve ser anterior à final.');return;}
-  const cx=v('rel_caixa');
-  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate);
-  if(cx==='__none__')ls=ls.filter(e=>!e.caixaId);
-  else if(cx)ls=ls.filter(e=>e.caixaId===cx);
-  REL_CACHE={de,ate,cx,ls};
+  const cx=v('rel_caixa');const tipo=v('rel_tipo')||'movimento';
+  const ls=dadosRelatorio(tipo,de,ate,cx).sort((a,b)=>a.d.localeCompare(b.d));
+  REL_CACHE={de,ate,cx,tipo,ls};
   const ent=ls.filter(e=>e.tipo==='entrada').reduce((s,e)=>s+e.val,0);
   const sai=ls.filter(e=>e.tipo==='saida').reduce((s,e)=>s+e.val,0);
   const res=ent-sai;
+  const ehVencer=tipo==='avencer_pagar'||tipo==='avencer_receber';
   // agrupar por categoria
   const cats={};ls.forEach(e=>{const k=(e.tipo==='entrada'?'＋ ':'－ ')+(e.cat||'Sem categoria');cats[k]=(cats[k]||0)+(e.tipo==='entrada'?e.val:-e.val);});
   const catRows=Object.entries(cats).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([k,vv])=>`<div class="row"><div class="rlabel">${esc(k)}</div><div class="mono" style="font-weight:600;color:${vv>=0?'var(--nipi)':'var(--peace)'}">${money(vv)}</div></div>`).join('');
@@ -2424,61 +2450,58 @@ function gerarRelatorio(){
   const ccs={};ls.forEach(e=>{if(!e.cc)return;ccs[e.cc]=(ccs[e.cc]||0)+(e.tipo==='entrada'?e.val:-e.val);});
   const ccRows=Object.entries(ccs).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([k,vv])=>`<div class="row"><div class="rlabel">🏷 ${esc(k)}</div><div class="mono" style="font-weight:600;color:${vv>=0?'var(--nipi)':'var(--peace)'}">${money(vv)}</div></div>`).join('');
   const cxNome=cx==='__none__'?'Sem caixa':(cx?caixaNome(cx):'Todos os caixas');
+  // KPIs conforme tipo
+  let kpis;
+  if(tipo==='recebido')kpis=met('Total recebido',money(ent),'var(--nipi)')+met('Lançamentos',ls.length,'var(--text)');
+  else if(tipo==='pago')kpis=met('Total pago',money(sai),'var(--peace)')+met('Lançamentos',ls.length,'var(--text)');
+  else if(tipo==='avencer_pagar')kpis=met('Total a pagar',money(sai),'var(--peace)')+met('Contas',ls.length,'var(--text)')+met('Vencidas',ls.filter(e=>e.situacao==='Vencida').length,'var(--com)');
+  else if(tipo==='avencer_receber')kpis=met('Total a receber',money(ent),'var(--nipi)')+met('Contas',ls.length,'var(--text)')+met('Vencidas',ls.filter(e=>e.situacao==='Vencida').length,'var(--com)');
+  else kpis=met('Entradas',money(ent),'var(--nipi)')+met('Saídas',money(sai),'var(--peace)')+met('Resultado',money(res),res>=0?'var(--nipi)':'var(--peace)');
   document.getElementById('relResultado').innerHTML=`
     <div class="card">
-      <div class="ctitle">Relatório · ${fmt(de)} a ${fmt(ate)} · ${esc(cxNome)}</div>
-      <div class="g3" style="margin-bottom:.5rem">
-        ${met('Entradas',money(ent),'var(--nipi)')}
-        ${met('Saídas',money(sai),'var(--peace)')}
-        ${met('Resultado',money(res),res>=0?'var(--nipi)':'var(--peace)')}
-      </div>
+      <div class="ctitle">${REL_TIPO_LABEL[tipo]} · ${fmt(de)} a ${fmt(ate)} · ${esc(cxNome)}</div>
+      <div class="g3" style="margin-bottom:.5rem">${kpis}</div>
       <div class="stitle">Por categoria</div>
-      ${catRows||'<div class="empty">Nenhum lançamento no período</div>'}
+      ${catRows||'<div class="empty">Nenhum registro no período</div>'}
       ${ccRows?'<div class="stitle">Por centro de custo</div>'+ccRows:''}
-      <div class="stitle">Lançamentos (${ls.length})</div>
-      ${ls.length?[...ls].sort((a,b)=>a.d.localeCompare(b.d)).map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.cc?' · 🏷 '+esc(e.cc):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}</div></div><span style="font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Sem lançamentos</div>'}
+      <div class="stitle">${ehVencer?'Contas':'Lançamentos'} (${ls.length})</div>
+      ${ls.length?ls.map(e=>`<div class="row"><div style="min-width:0"><div class="rlabel">${esc(e.desc)}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.cc?' · 🏷 '+esc(e.cc):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}${e.situacao?' · '+e.situacao:''}</div></div><span style="font-weight:600;color:${e.tipo==='entrada'?'var(--nipi)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span></div>`).join(''):'<div class="empty">Sem registros</div>'}
     </div>`;
 }
 function exportRelatorioCSV(){
   if(!REL_CACHE||!REL_CACHE.ls){alert('Gere o relatório primeiro.');return;}
-  const rows=[['Data','Descrição','Categoria','Caixa','Tipo','Valor']];
-  [...REL_CACHE.ls].sort((a,b)=>a.d.localeCompare(b.d)).forEach(e=>{
-    rows.push([e.d,e.desc,e.cat||'',e.caixaId?caixaNome(e.caixaId):'',e.tipo,String(e.val).replace('.',',')]);
+  const rows=[['Data','Descrição','Categoria','Centro de custo','Caixa','Tipo','Situação','Valor']];
+  REL_CACHE.ls.forEach(e=>{
+    rows.push([e.d,e.desc,e.cat||'',e.cc||'',e.caixaId?caixaNome(e.caixaId):'',e.tipo,e.situacao||'',String(e.val.toFixed(2)).replace('.',',')]);
   });
   const ent=REL_CACHE.ls.filter(e=>e.tipo==='entrada').reduce((s,e)=>s+e.val,0);
   const sai=REL_CACHE.ls.filter(e=>e.tipo==='saida').reduce((s,e)=>s+e.val,0);
-  rows.push([]);rows.push(['','','','','Entradas',String(ent).replace('.',',')]);
-  rows.push(['','','','','Saídas',String(sai).replace('.',',')]);
-  rows.push(['','','','','Resultado',String(ent-sai).replace('.',',')]);
+  rows.push([]);rows.push(['','','','','','','Entradas',String(ent.toFixed(2)).replace('.',',')]);
+  rows.push(['','','','','','','Saídas',String(sai.toFixed(2)).replace('.',',')]);
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${(c||'').toString().replace(/"/g,'""')}"`).join(';')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`relatorio_${REL_CACHE.de}_a_${REL_CACHE.ate}.csv`;a.click();
+  a.download=`relatorio_${REL_CACHE.tipo}_${REL_CACHE.de}_a_${REL_CACHE.ate}.csv`;a.click();
 }
-/* gera PDF do relatório por período — modo: 'todos' | 'entrada' | 'saida' */
-function imprimirRelatorio(modo){
+/* gera PDF do relatório conforme o tipo selecionado */
+function imprimirRelatorioTipo(){
   const de=vData('rel_de'),ate=vData('rel_ate');
   if(!de||!ate){alert('Informe as duas datas primeiro.');return;}
   if(de>ate){alert('A data inicial deve ser anterior à final.');return;}
-  const cx=v('rel_caixa');
-  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate);
-  if(cx==='__none__')ls=ls.filter(e=>!e.caixaId);
-  else if(cx)ls=ls.filter(e=>e.caixaId===cx);
-  if(modo==='entrada')ls=ls.filter(e=>e.tipo==='entrada');
-  else if(modo==='saida')ls=ls.filter(e=>e.tipo==='saida');
-  ls=[...ls].sort((a,b)=>a.d.localeCompare(b.d));
-  if(!ls.length){alert('Nenhum lançamento neste período/filtro.');return;}
-  const titulo={todos:'Relatório de Movimento',entrada:'Relatório de Recebimentos (Entradas)',saida:'Relatório de Pagamentos (Saídas)'}[modo];
+  const cx=v('rel_caixa');const tipo=v('rel_tipo')||'movimento';
+  const ls=dadosRelatorio(tipo,de,ate,cx).sort((a,b)=>a.d.localeCompare(b.d));
+  if(!ls.length){alert('Nenhum registro neste período/filtro.');return;}
   const cxNome=cx==='__none__'?'Sem caixa':(cx?caixaNome(cx):'Todos os caixas');
   const ent=ls.filter(e=>e.tipo==='entrada').reduce((s,e)=>s+e.val,0);
   const sai=ls.filter(e=>e.tipo==='saida').reduce((s,e)=>s+e.val,0);
-  // resumo por categoria
-  const cats={};ls.forEach(e=>{const k=e.cat||'Sem categoria';cats[k]=(cats[k]||0)+e.val;});
-  const catResumo=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,vv])=>`<span>${esc(k)}: <b>${money(vv)}</b></span>`).join('');
+  const ehVencer=tipo==='avencer_pagar'||tipo==='avencer_receber';
   let resumo='<div class="resumo">';
-  if(modo==='todos')resumo+=`<span>Entradas: <b style="color:#1A5C1A">${money(ent)}</b></span><span>Saídas: <b style="color:#A32D2D">${money(sai)}</b></span><span>Resultado: <b>${money(ent-sai)}</b></span>`;
-  else if(modo==='entrada')resumo+=`<span>Total de entradas: <b style="color:#1A5C1A">${money(ent)}</b></span><span>${ls.length} lançamento(s)</span>`;
-  else resumo+=`<span>Total de saídas: <b style="color:#A32D2D">${money(sai)}</b></span><span>${ls.length} lançamento(s)</span>`;
+  if(tipo==='movimento')resumo+=`<span>Entradas: <b style="color:#1A5C1A">${money(ent)}</b></span><span>Saídas: <b style="color:#A32D2D">${money(sai)}</b></span><span>Resultado: <b>${money(ent-sai)}</b></span>`;
+  else if(tipo==='recebido')resumo+=`<span>Total recebido: <b style="color:#1A5C1A">${money(ent)}</b></span><span>${ls.length} lançamento(s)</span>`;
+  else if(tipo==='pago')resumo+=`<span>Total pago: <b style="color:#A32D2D">${money(sai)}</b></span><span>${ls.length} lançamento(s)</span>`;
+  else if(tipo==='avencer_pagar')resumo+=`<span>Total a pagar: <b style="color:#A32D2D">${money(sai)}</b></span><span>${ls.length} conta(s)</span><span>Vencidas: <b>${ls.filter(e=>e.situacao==='Vencida').length}</b></span>`;
+  else resumo+=`<span>Total a receber: <b style="color:#1A5C1A">${money(ent)}</b></span><span>${ls.length} conta(s)</span><span>Vencidas: <b>${ls.filter(e=>e.situacao==='Vencida').length}</b></span>`;
   resumo+='</div>';
+  const colSit=ehVencer;
   const linhas=ls.map(e=>{
     const isE=e.tipo==='entrada';
     return `<tr>
@@ -2487,12 +2510,18 @@ function imprimirRelatorio(modo){
       <td>${esc(e.cat||'')}</td>
       <td>${esc(e.cc||'')}</td>
       <td>${esc(e.caixaId?caixaNome(e.caixaId):'')}</td>
-      <td class="t">${isE?'Entrada':'Saída'}</td>
+      ${colSit?`<td class="t">${e.situacao}</td>`:`<td class="t">${isE?'Entrada':'Saída'}</td>`}
       <td class="v" style="color:${isE?'#1A5C1A':'#A32D2D'}">${isE?'+':'−'} ${money(e.val)}</td>
     </tr>`;
   }).join('');
-  const cab=[{txt:'Data'},{txt:'Descrição'},{txt:'Categoria'},{txt:'Centro custo'},{txt:'Caixa'},{txt:'Tipo',cls:'t'},{txt:'Valor',cls:'v'}];
-  abrirDocPDF(titulo,`Período: ${fmt(de)} a ${fmt(ate)} · ${esc(cxNome)}`,resumo,cab,linhas);
+  const cab=[{txt:'Data'},{txt:ehVencer?'Fornecedor/Cliente':'Descrição'},{txt:'Categoria'},{txt:'Centro custo'},{txt:'Caixa'},{txt:colSit?'Situação':'Tipo',cls:'t'},{txt:'Valor',cls:'v'}];
+  abrirDocPDF(REL_TIPO_LABEL[tipo],`Período: ${fmt(de)} a ${fmt(ate)} · ${esc(cxNome)}`,resumo,cab,linhas);
+}
+/* mantém compatibilidade: PDF rápido de movimento/entrada/saída */
+function imprimirRelatorio(modo){
+  const map={todos:'movimento',entrada:'recebido',saida:'pago'};
+  const sel=document.getElementById('rel_tipo');if(sel)sel.value=map[modo]||'movimento';
+  imprimirRelatorioTipo();
 }
 
 /* ── RENDER ALL ── */
@@ -2517,7 +2546,7 @@ Object.assign(window,{
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
   openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
   lerBoletoPagar,buscarCNPJPagar,buscarCNPJReceber,autoCat,importarNF,imprimirPagas,
-  imprimirContasAbertas,imprimirRelatorio
+  imprimirContasAbertas,imprimirRelatorio,imprimirRelatorioTipo
 });
 
 /* ── INIT ── */
