@@ -525,7 +525,12 @@ textarea{resize:vertical;min-height:60px}
             <div style="display:flex;gap:7px;flex-wrap:wrap">
               <button class="btn btnp" onclick="gerarRelatorio()">Gerar relatório</button>
               <button class="btn" onclick="exportRelatorioCSV()">⬇ Exportar CSV</button>
-              <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+            </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:2px">
+              <span style="font-size:12px;color:var(--t3);align-self:center">PDF por período:</span>
+              <button class="btn btnsm" onclick="imprimirRelatorio('todos')">🖨 Movimento completo</button>
+              <button class="btn btnsm" onclick="imprimirRelatorio('entrada')">🖨 Só recebimentos</button>
+              <button class="btn btnsm" onclick="imprimirRelatorio('saida')">🖨 Só pagamentos</button>
             </div>
           </div>
         </div>
@@ -2449,6 +2454,46 @@ function exportRelatorioCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download=`relatorio_${REL_CACHE.de}_a_${REL_CACHE.ate}.csv`;a.click();
 }
+/* gera PDF do relatório por período — modo: 'todos' | 'entrada' | 'saida' */
+function imprimirRelatorio(modo){
+  const de=vData('rel_de'),ate=vData('rel_ate');
+  if(!de||!ate){alert('Informe as duas datas primeiro.');return;}
+  if(de>ate){alert('A data inicial deve ser anterior à final.');return;}
+  const cx=v('rel_caixa');
+  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate);
+  if(cx==='__none__')ls=ls.filter(e=>!e.caixaId);
+  else if(cx)ls=ls.filter(e=>e.caixaId===cx);
+  if(modo==='entrada')ls=ls.filter(e=>e.tipo==='entrada');
+  else if(modo==='saida')ls=ls.filter(e=>e.tipo==='saida');
+  ls=[...ls].sort((a,b)=>a.d.localeCompare(b.d));
+  if(!ls.length){alert('Nenhum lançamento neste período/filtro.');return;}
+  const titulo={todos:'Relatório de Movimento',entrada:'Relatório de Recebimentos (Entradas)',saida:'Relatório de Pagamentos (Saídas)'}[modo];
+  const cxNome=cx==='__none__'?'Sem caixa':(cx?caixaNome(cx):'Todos os caixas');
+  const ent=ls.filter(e=>e.tipo==='entrada').reduce((s,e)=>s+e.val,0);
+  const sai=ls.filter(e=>e.tipo==='saida').reduce((s,e)=>s+e.val,0);
+  // resumo por categoria
+  const cats={};ls.forEach(e=>{const k=e.cat||'Sem categoria';cats[k]=(cats[k]||0)+e.val;});
+  const catResumo=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,vv])=>`<span>${esc(k)}: <b>${money(vv)}</b></span>`).join('');
+  let resumo='<div class="resumo">';
+  if(modo==='todos')resumo+=`<span>Entradas: <b style="color:#1A5C1A">${money(ent)}</b></span><span>Saídas: <b style="color:#A32D2D">${money(sai)}</b></span><span>Resultado: <b>${money(ent-sai)}</b></span>`;
+  else if(modo==='entrada')resumo+=`<span>Total de entradas: <b style="color:#1A5C1A">${money(ent)}</b></span><span>${ls.length} lançamento(s)</span>`;
+  else resumo+=`<span>Total de saídas: <b style="color:#A32D2D">${money(sai)}</b></span><span>${ls.length} lançamento(s)</span>`;
+  resumo+='</div>';
+  const linhas=ls.map(e=>{
+    const isE=e.tipo==='entrada';
+    return `<tr>
+      <td>${fmt(e.d)}</td>
+      <td>${esc(e.desc||'')}</td>
+      <td>${esc(e.cat||'')}</td>
+      <td>${esc(e.cc||'')}</td>
+      <td>${esc(e.caixaId?caixaNome(e.caixaId):'')}</td>
+      <td class="t">${isE?'Entrada':'Saída'}</td>
+      <td class="v" style="color:${isE?'#1A5C1A':'#A32D2D'}">${isE?'+':'−'} ${money(e.val)}</td>
+    </tr>`;
+  }).join('');
+  const cab=[{txt:'Data'},{txt:'Descrição'},{txt:'Categoria'},{txt:'Centro custo'},{txt:'Caixa'},{txt:'Tipo',cls:'t'},{txt:'Valor',cls:'v'}];
+  abrirDocPDF(titulo,`Período: ${fmt(de)} a ${fmt(ate)} · ${esc(cxNome)}`,resumo,cab,linhas);
+}
 
 /* ── RENDER ALL ── */
 function renderAll(){
@@ -2472,7 +2517,7 @@ Object.assign(window,{
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
   openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
   lerBoletoPagar,buscarCNPJPagar,buscarCNPJReceber,autoCat,importarNF,imprimirPagas,
-  imprimirContasAbertas
+  imprimirContasAbertas,imprimirRelatorio
 });
 
 /* ── INIT ── */
