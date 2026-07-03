@@ -536,6 +536,25 @@ textarea{resize:vertical;min-height:60px}
           </div>
         </div>
 
+        <div class="card" id="concilFiltros" style="display:none">
+          <div class="ir" style="align-items:center;flex-wrap:wrap;gap:10px">
+            <div class="mf" style="gap:3px"><label style="font-size:11px;color:var(--t2)">Período de</label><input type="text" id="concil_de" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)" style="max-width:130px"></div>
+            <div class="mf" style="gap:3px"><label style="font-size:11px;color:var(--t2)">até</label><input type="text" id="concil_ate" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)" style="max-width:130px"></div>
+            <div class="mf" style="gap:3px"><label style="font-size:11px;color:var(--t2)">Ordenar por</label>
+              <select id="concil_ord" onchange="renderConcil()" style="width:auto">
+                <option value="data">Data (mais antiga)</option>
+                <option value="data_desc">Data (mais recente)</option>
+                <option value="alfa">Nome (A → Z)</option>
+                <option value="alfa_desc">Nome (Z → A)</option>
+                <option value="valor">Maior valor</option>
+              </select>
+            </div>
+            <input id="concil_busca" placeholder="🔍 Buscar descrição..." oninput="renderConcil()" style="max-width:200px">
+            <button class="btn btnsm" onclick="aplicarFiltroPeriodo()">Filtrar período</button>
+            <button class="btn btnsm" onclick="limparFiltroConcil()">Limpar</button>
+          </div>
+        </div>
+
         <div id="concilList"><div class="empty">Importe um arquivo OFX ou CSV para iniciar.</div></div>
       </div>
 
@@ -873,6 +892,10 @@ function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.par
   ['flux','receber','pagar','boletos','veiculos','ofx','caixas','categorias','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
   if(!S.users.length)S.users=SEED.map(s=>({...s,t:new Date().toISOString()}));
   if(!S.categorias.length)S.categorias=seedCategorias();
+  else{ // completa categorias-semente que faltam (ex: cartões adicionados numa atualização)
+    const nomes=new Set(S.categorias.map(c=>c.nome.toLowerCase()+'|'+c.tipo));
+    seedCategorias().forEach(sc=>{if(!nomes.has(sc.nome.toLowerCase()+'|'+sc.tipo))S.categorias.push(sc);});
+  }
   // Dados de exemplo removidos — sistema sobe vazio para os dados reais.
   // (veículos, caixas e lançamentos são criados pelo usuário no app)
   S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(!u.pin)u.pin='0000';if(u.caixaId===undefined)u.caixaId='';});
@@ -1880,14 +1903,16 @@ function seedCategorias(){
   const pal={verde:'var(--nipi)',azul:'var(--gr)',violeta:'var(--ment)',terra:'var(--peace)',rosa:'var(--mkt)',ambar:'var(--com)'};
   const saida=[
     ['Combustível','var(--peace)'],['Manutenção de Veículos','var(--com)'],['Taxa de Pedágio','var(--ment)'],
-    ['Salários, Encargos e Benefícios','var(--gr)'],['Aluguel e Condomínio','var(--mkt)'],['Energia Elétrica','var(--com)'],
+    ['Salários, Encargos e Benefícios','var(--gr)'],['Serviço (Pessoa Física)','var(--peace)'],['Aluguel e Condomínio','var(--mkt)'],['Energia Elétrica','var(--com)'],
     ['Água','var(--gr)'],['Telefone e Internet','var(--ment)'],['Sistemas (softwares)','var(--gr)'],
     ['Serviços Contratados','var(--peace)'],['Material de Escritório','var(--t3)'],['Fornecedores','var(--peace)'],
     ['Impostos sobre Receita','var(--mkt)'],['Taxas e Contribuições','var(--com)'],['Taxas Bancárias','var(--com)'],
-    ['Taxas financeiras / maquininha','var(--com)'],['Pagamento Operacional','var(--peace)'],['Multas','var(--peace)'],['Outras Despesas','var(--t3)']
+    ['Taxas financeiras / maquininha','var(--com)'],['PIX Pago','var(--peace)'],['Pagamento Operacional','var(--peace)'],['Multas','var(--peace)'],['Outras Despesas','var(--t3)']
   ];
   const entrada=[
-    ['Receita com Frete','var(--nipi)'],['Vendas','var(--nipi)'],['Serviços','var(--gr)'],
+    ['Receita com Frete','var(--nipi)'],['Frete de Mercadoria','var(--nipi)'],['Vendas','var(--nipi)'],['Serviços','var(--gr)'],
+    ['Cartão de Crédito','var(--gr)'],['Cartão de Débito','var(--gr)'],
+    ['Rede / Mastercard','var(--ment)'],['Cielo','var(--ment)'],['Getnet','var(--ment)'],['Stone','var(--ment)'],['PIX Recebido','var(--nipi)'],
     ['Recebimentos','var(--nipi)'],['Adiantamento de Cliente','var(--gr)'],['Rendimentos','var(--ment)'],['Outras Receitas','var(--t3)']
   ];
   const mk=(arr,tipo)=>arr.map(([nome,cor])=>({id:'cat_'+uid(),nome,tipo,cor}));
@@ -2155,7 +2180,13 @@ function conciliar(){
     ).sort((a,b)=>Math.abs(new Date(a.d+'T12:00:00')-t)-Math.abs(new Date(b.d+'T12:00:00')-t));
     const match=candidatos[0];
     if(match)usados.add(match.id);
-    const catSug=match?match.cat:(item.cat||(item.tipo==='entrada'?'Recebimentos':'Outras Despesas'));
+    // categoria sugerida: (1) do lançamento casado, (2) aprendida do histórico da descrição, (3) padrão por tipo
+    let catSug;
+    if(match)catSug=match.cat;
+    else{
+      const aprendida=sugereCategoria(item.memo);
+      catSug=item.cat||aprendida||(item.tipo==='entrada'?'Recebimentos':'Outras Despesas');
+    }
     return {...item,status:match?'ok':'new',matchId:match?match.id:null,matchDesc:match?match.desc:'',cat:catSug,sel:match?false:true};
   });
 }
@@ -2209,6 +2240,7 @@ function readOFX(f){
     document.getElementById('ofxSub').textContent=OFXLIST.filter(i=>i.status==='ok').length+' já conciliadas, '+OFXLIST.filter(i=>i.status==='new').length+' novas para importar';
     document.getElementById('concilMetrics').style.display='';
     document.getElementById('concilActions').style.display='';
+    document.getElementById('concilFiltros').style.display='';
     renderConcil();
   };
   r.readAsText(f,'latin1');
@@ -2228,7 +2260,35 @@ function atualizaContadorSel(){
   const c=document.getElementById('concilSelCount');if(c)c.textContent=n+' selecionado(s)';
 }
 let CONCIL_FILTER='';
+let CONCIL_PERIODO=null; // {de, ate} em ISO, ou null
 function filterC(f){CONCIL_FILTER=f;renderConcil();}
+function aplicarFiltroPeriodo(){
+  const de=vData('concil_de'),ate=vData('concil_ate');
+  if(!de&&!ate){alert('Informe ao menos uma data para filtrar.');return;}
+  CONCIL_PERIODO={de:de||'0000-00-00',ate:ate||'9999-99-99'};
+  renderConcil();
+}
+function limparFiltroConcil(){
+  CONCIL_PERIODO=null;
+  const de=document.getElementById('concil_de'),ate=document.getElementById('concil_ate'),b=document.getElementById('concil_busca');
+  if(de)de.value='';if(ate)ate.value='';if(b)b.value='';
+  renderConcil();
+}
+/* aplica período, busca e ordenação a uma lista de {item,i} */
+function filtraOrdena(itens){
+  const busca=(v('concil_busca')||'').toLowerCase();
+  if(CONCIL_PERIODO)itens=itens.filter(x=>x.item.d>=CONCIL_PERIODO.de&&x.item.d<=CONCIL_PERIODO.ate);
+  if(busca)itens=itens.filter(x=>x.item.memo.toLowerCase().includes(busca));
+  const ord=v('concil_ord')||'data';
+  const cmp={
+    data:(a,b)=>a.item.d.localeCompare(b.item.d),
+    data_desc:(a,b)=>b.item.d.localeCompare(a.item.d),
+    alfa:(a,b)=>a.item.memo.localeCompare(b.item.memo,'pt'),
+    alfa_desc:(a,b)=>b.item.memo.localeCompare(a.item.memo,'pt'),
+    valor:(a,b)=>b.item.val-a.item.val
+  }[ord]||((a,b)=>a.item.d.localeCompare(b.item.d));
+  return [...itens].sort(cmp);
+}
 function renderConcil(){
   document.getElementById('cs_tot').textContent=OFXLIST.length||'—';
   document.getElementById('cs_ok').textContent=OFXLIST.filter(i=>i.status==='ok').length||'—';
@@ -2268,6 +2328,7 @@ function renderConcil(){
     if(CONCIL_FILTER==='ok')itens=itens.filter(x=>x.item.status==='ok'&&!x.item.ignorado);
     else if(CONCIL_FILTER==='new')itens=itens.filter(x=>x.item.status==='new'&&!x.item.ignorado);
     else if(CONCIL_FILTER==='ign')itens=itens.filter(x=>x.item.ignorado);
+    itens=filtraOrdena(itens); // período + busca + ordenação
     if(!itens.length)return '';
     const totalG=itens.reduce((s,x)=>s+x.item.val,0);
     let h=`<div class="card" style="margin-bottom:1rem">
@@ -2665,6 +2726,7 @@ Object.assign(window,{
   exportRelatorioCSV,fileOFX,gerarRelatorio,logout,
   ofxSetCat,ofxToggle,ofxSelAll,ofxSelGrupo,filterC,importSelecionados,
   conciliarAuto,categorizarMassa,baixaAutomatica,ignorarSelecionados,
+  aplicarFiltroPeriodo,limparFiltroConcil,renderConcil,
   onDcfTipoChange,onRoleChange,openVeicForm,pagarBoleto,pagarConta,pinClear,
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
