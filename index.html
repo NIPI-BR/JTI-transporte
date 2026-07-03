@@ -134,6 +134,8 @@ textarea{resize:vertical;min-height:60px}
 .dash-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1.3rem}
 .dash-actions{display:flex;gap:8px;flex-wrap:wrap}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.1rem}
+.fmt-pill{font-size:11px;font-weight:600;padding:3px 11px;border-radius:20px;background:var(--gl);color:var(--gr)}
+.lg-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.1rem;overflow-x:auto}
 .tab{padding:7px 13px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;background:none;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .12s}
@@ -474,34 +476,67 @@ textarea{resize:vertical;min-height:60px}
 
       <!-- CONCILIAÇÃO OFX -->
       <div id="page-concil" class="page">
-        <div class="ptitle">Conciliação Bancária OFX</div>
-        <div class="psub">Importe o extrato (.ofx) do banco — o sistema confere com seus lançamentos.</div>
-        <div class="g2">
+        <div class="dash-head">
           <div>
-            <div class="card" id="ofxDrop" style="border:2px dashed var(--border2);text-align:center;cursor:pointer" onclick="document.getElementById('ofx_file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--text)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="dropOFX(event)">
-              <input type="file" id="ofx_file" accept=".ofx,.OFX,.csv,.CSV,.txt" style="display:none" onchange="fileOFX(event)">
-              <div style="font-size:30px;opacity:.5;margin-bottom:8px" id="ofxIcon">🏦</div>
-              <div style="font-weight:600;font-size:14px" id="ofxTitle">Arraste o extrato (OFX ou CSV) ou clique</div>
-              <div style="font-size:12px;color:var(--t3)" id="ofxSub">Aceita .ofx de qualquer banco e .csv com colunas de data, descrição e valor</div>
-            </div>
+            <div class="ptitle">Conciliação Bancária</div>
+            <div class="psub" id="concilSub">Confira o extrato contra o sistema · 0 lançamentos importados · 0 pendentes</div>
           </div>
-          <div>
-            <div class="g2" style="margin-bottom:.6rem">
-              <div class="met" style="border-left-color:var(--text);text-align:center"><div class="mval" id="cs_tot">—</div><div class="mlabel">Transações</div></div>
-              <div class="met" style="border-left-color:var(--nipi);text-align:center"><div class="mval" style="color:var(--nipi)" id="cs_ok">—</div><div class="mlabel">Conciliados</div></div>
-              <div class="met" style="border-left-color:var(--com);text-align:center"><div class="mval" style="color:var(--com)" id="cs_pend">—</div><div class="mlabel">Pendentes</div></div>
-              <div class="met" style="border-left-color:var(--peace);text-align:center"><div class="mval" style="color:var(--peace)" id="cs_new">—</div><div class="mlabel">Novos</div></div>
-            </div>
-            <div class="card">
-              <div class="ctitle">Configuração</div>
-              <div class="ir"><select id="concil_conta"><option>Banco do Brasil</option><option>Itaú</option><option>Bradesco</option><option>Caixa Econômica</option><option>Sicoob</option></select><input type="number" id="concil_tol" value="0.10" step="0.01" placeholder="Tolerância R$"></div>
-            </div>
+          <div class="dash-actions">
+            <button class="btn btnp" onclick="document.getElementById('ofx_file').click()">Importar extrato</button>
+            <button class="btn" onclick="conciliarAuto()">✦ Conciliar automaticamente</button>
           </div>
         </div>
+
         <div class="card">
-          <div class="ctitle">Transações do extrato</div>
-          <div id="concilList"><div class="empty">Importe um arquivo OFX para iniciar.</div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:600;color:var(--t2)">Formatos aceitos:</span>
+              <span class="fmt-pill">OFX</span><span class="fmt-pill">CSV</span>
+            </div>
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--t2)">
+              <span style="display:flex;align-items:center;gap:5px"><span class="lg-dot" style="background:var(--nipi)"></span>Conciliado</span>
+              <span style="display:flex;align-items:center;gap:5px"><span class="lg-dot" style="background:var(--com)"></span>Novo</span>
+              <span style="display:flex;align-items:center;gap:5px"><span class="lg-dot" style="background:var(--t3)"></span>Ignorado</span>
+            </div>
+          </div>
+          <div id="ofxDrop" style="border:2px dashed var(--border2);border-radius:var(--rs);text-align:center;cursor:pointer;padding:2.4rem 1rem" onclick="document.getElementById('ofx_file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--nipi)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="dropOFX(event)">
+            <input type="file" id="ofx_file" accept=".ofx,.OFX,.csv,.CSV,.txt" style="display:none" onchange="fileOFX(event)">
+            <div style="font-size:26px;opacity:.45;margin-bottom:6px" id="ofxIcon">⇧</div>
+            <div style="font-weight:500;font-size:14px;color:var(--t2)" id="ofxTitle">Arraste o arquivo OFX/CSV aqui, ou clique para selecionar.</div>
+            <div style="font-size:12px;color:var(--t3);margin-top:3px" id="ofxSub">Aceita .ofx de qualquer banco e .csv com colunas de data, descrição e valor.</div>
+          </div>
+          <div class="ir" style="margin-top:10px;align-items:center">
+            <span style="font-size:12px;color:var(--t3)">Tolerância de valor (R$):</span>
+            <input type="number" id="concil_tol" value="0.10" step="0.01" style="max-width:120px" title="Diferença máxima para casar transações">
+          </div>
         </div>
+
+        <!-- métricas -->
+        <div class="g4" id="concilMetrics" style="display:none">
+          <div class="met" style="border-left-color:var(--text);text-align:center"><div class="mval" id="cs_tot">—</div><div class="mlabel">Transações</div></div>
+          <div class="met" style="border-left-color:var(--nipi);text-align:center"><div class="mval" style="color:var(--nipi)" id="cs_ok">—</div><div class="mlabel">Conciliados</div></div>
+          <div class="met" style="border-left-color:var(--com);text-align:center"><div class="mval" style="color:var(--com)" id="cs_new">—</div><div class="mlabel">Novos</div></div>
+          <div class="met" style="border-left-color:var(--t3);text-align:center"><div class="mval" style="color:var(--t3)" id="cs_pend">—</div><div class="mlabel">Ignorados</div></div>
+        </div>
+
+        <!-- barra de ações em massa -->
+        <div class="card" id="concilActions" style="display:none">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
+              <input type="checkbox" id="concilMarcarTodos" onchange="ofxSelAll(this.checked)" style="width:18px;height:18px;cursor:pointer">
+              Marcar todos <span style="font-weight:400;color:var(--t3)" id="concilSelCount">0 selecionados</span>
+            </label>
+            <span style="flex:1"></span>
+            <button class="btn btnsm btnnipi" onclick="importSelecionados()">Conciliar</button>
+            <button class="btn btnsm" onclick="ofxSelGrupo('saida',true)">Agrupar pagamentos</button>
+            <button class="btn btnsm" onclick="ofxSelGrupo('entrada',true)">Agrupar recebimentos</button>
+            <button class="btn btnsm" onclick="categorizarMassa()">Categorizar em massa</button>
+            <button class="btn btnsm" onclick="baixaAutomatica()">Baixa automática</button>
+            <button class="btn btnsm" onclick="ignorarSelecionados()">Ignorar</button>
+          </div>
+        </div>
+
+        <div id="concilList"><div class="empty">Importe um arquivo OFX ou CSV para iniciar.</div></div>
       </div>
 
       <!-- CONTAS PAGAS -->
@@ -2171,48 +2206,56 @@ function readOFX(f){
     conciliar();
     document.getElementById('ofxIcon').textContent='✅';
     document.getElementById('ofxTitle').textContent=f.name+' · '+OFXLIST.length+' transações ('+(isOFX?'OFX':'CSV')+')';
-    document.getElementById('ofxSub').textContent=OFXLIST.filter(i=>i.status==='ok').length+' conciliadas, '+OFXLIST.filter(i=>i.status==='new').length+' novas';
+    document.getElementById('ofxSub').textContent=OFXLIST.filter(i=>i.status==='ok').length+' já conciliadas, '+OFXLIST.filter(i=>i.status==='new').length+' novas para importar';
+    document.getElementById('concilMetrics').style.display='';
+    document.getElementById('concilActions').style.display='';
     renderConcil();
   };
   r.readAsText(f,'latin1');
 }
+/* atualiza subtítulo do cabeçalho */
+function atualizaConcilSub(){
+  const sub=document.getElementById('concilSub');if(!sub)return;
+  const imp=OFXLIST.length;const pend=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado).length;
+  sub.textContent=`Confira o extrato contra o sistema · ${imp} lançamentos importados · ${pend} pendentes`;
+}
 /* atualiza categoria/seleção de um item */
 function ofxSetCat(i,cat){if(OFXLIST[i])OFXLIST[i].cat=cat;}
 function ofxToggle(i,on){if(OFXLIST[i])OFXLIST[i].sel=on;atualizaContadorSel();}
-function ofxSelAll(on){OFXLIST.forEach(it=>{if(it.status==='new')it.sel=on;});renderConcil();}
+function ofxSelAll(on){OFXLIST.forEach(it=>{if(it.status==='new'&&!it.ignorado)it.sel=on;});renderConcil();}
 function atualizaContadorSel(){
   const n=OFXLIST.filter(i=>i.status==='new'&&i.sel).length;
-  const b=document.getElementById('btnImportSel');if(b)b.textContent='Importar selecionados ('+n+')';
+  const c=document.getElementById('concilSelCount');if(c)c.textContent=n+' selecionado(s)';
 }
 let CONCIL_FILTER='';
 function filterC(f){CONCIL_FILTER=f;renderConcil();}
 function renderConcil(){
   document.getElementById('cs_tot').textContent=OFXLIST.length||'—';
   document.getElementById('cs_ok').textContent=OFXLIST.filter(i=>i.status==='ok').length||'—';
-  document.getElementById('cs_pend').textContent=OFXLIST.filter(i=>i.status==='pend').length||'—';
-  document.getElementById('cs_new').textContent=OFXLIST.filter(i=>i.status==='new').length||'—';
+  document.getElementById('cs_pend').textContent=OFXLIST.filter(i=>i.ignorado).length||'—';
+  document.getElementById('cs_new').textContent=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado).length||'—';
+  atualizaConcilSub();atualizaContadorSel();
   const el=document.getElementById('concilList');
   if(!OFXLIST.length){el.innerHTML='<div class="empty">Importe um arquivo OFX ou CSV para iniciar.</div>';return;}
-  const novos=OFXLIST.filter(i=>i.status==='new');
-  const selN=novos.filter(i=>i.sel).length;
-  // barra superior de ações globais
+  const novos=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado);
+  // barra de filtros
   let head=`<div class="filter-bar" style="margin-bottom:1rem;align-items:center">
     <button class="btn btnsm ${CONCIL_FILTER===''?'btnp':''}" onclick="filterC('')">Todos (${OFXLIST.length})</button>
     <button class="btn btnsm ${CONCIL_FILTER==='new'?'btnp':''}" onclick="filterC('new')">A importar (${novos.length})</button>
     <button class="btn btnsm ${CONCIL_FILTER==='ok'?'btnp':''}" onclick="filterC('ok')">Já conciliados (${OFXLIST.filter(i=>i.status==='ok').length})</button>
-    <span style="flex:1"></span>
-    <button class="btn btnsm btnnipi" id="btnImportSel" onclick="importSelecionados()">Importar selecionados (${selN})</button>
+    <button class="btn btnsm ${CONCIL_FILTER==='ign'?'btnp':''}" onclick="filterC('ign')">Ignorados (${OFXLIST.filter(i=>i.ignorado).length})</button>
   </div>`;
-  // renderiza um item
   const renderItem=(item,i)=>{
-    const isNew=item.status==='new';
-    const bdg=item.status==='ok'
-      ? `<span class="badge bok" title="${esc(item.matchDesc||'')}">✓ Já lançado</span>`
-      : '<span class="badge bdanger">✦ Novo</span>';
+    const isNew=item.status==='new'&&!item.ignorado;
+    let bdg;
+    if(item.ignorado)bdg='<span class="badge bgray">⊘ Ignorado</span>';
+    else if(item.status==='ok')bdg=`<span class="badge bok" title="${esc(item.matchDesc||'')}">✓ Já lançado</span>`;
+    else bdg='<span class="badge bwarn">✦ Novo</span>';
     const chk=isNew?`<input type="checkbox" ${item.sel?'checked':''} onchange="ofxToggle(${i},this.checked)" style="width:18px;height:18px;flex-shrink:0;cursor:pointer">`:'<span style="width:18px;flex-shrink:0"></span>';
-    const catSel=isNew?`<select onchange="ofxSetCat(${i},this.value)" style="width:auto;min-width:140px;font-size:12px;padding:4px 8px">${catOptions(item.tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_(),item.cat)}</select>`:`<span class="rsub" style="min-width:140px">já no sistema</span>`;
+    const catSel=isNew?`<select onchange="ofxSetCat(${i},this.value)" style="width:auto;min-width:140px;font-size:12px;padding:4px 8px">${catOptions(item.tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_(),item.cat)}</select>`:`<span class="rsub" style="min-width:140px">${item.ignorado?'ignorado':'já no sistema'}</span>`;
     const sub=item.status==='ok'&&item.matchDesc?`${fmt(item.d)} · casado com: ${esc(item.matchDesc)}`:`${fmt(item.d)} · ${item.tipo==='entrada'?'Crédito no banco':'Débito no banco'}`;
-    return`<div class="row" style="gap:10px;align-items:center;${item.status==='ok'?'opacity:.7':''}">
+    const dim=(item.status==='ok'||item.ignorado)?'opacity:.65':'';
+    return`<div class="row" style="gap:10px;align-items:center;${dim}">
       ${chk}
       <div style="min-width:0;flex:1"><div class="rlabel">${esc(item.memo)}</div><div class="rsub">${sub}</div></div>
       ${catSel}
@@ -2220,22 +2263,15 @@ function renderConcil(){
       ${bdg}
     </div>`;
   };
-  // monta um grupo (entrada ou saída)
   const grupo=(tipo,titulo,cor)=>{
     let itens=OFXLIST.map((item,i)=>({item,i})).filter(x=>x.item.tipo===tipo);
-    if(CONCIL_FILTER==='ok')itens=itens.filter(x=>x.item.status==='ok');
-    else if(CONCIL_FILTER==='new')itens=itens.filter(x=>x.item.status==='new');
+    if(CONCIL_FILTER==='ok')itens=itens.filter(x=>x.item.status==='ok'&&!x.item.ignorado);
+    else if(CONCIL_FILTER==='new')itens=itens.filter(x=>x.item.status==='new'&&!x.item.ignorado);
+    else if(CONCIL_FILTER==='ign')itens=itens.filter(x=>x.item.ignorado);
     if(!itens.length)return '';
-    const novosG=itens.filter(x=>x.item.status==='new');
     const totalG=itens.reduce((s,x)=>s+x.item.val,0);
     let h=`<div class="card" style="margin-bottom:1rem">
-      <div class="ctitle" style="border-left:3px solid ${cor};padding-left:9px">
-        ${titulo} · ${itens.length} · ${money(totalG)}
-        ${novosG.length?`<span style="margin-left:auto;display:flex;gap:6px">
-          <button class="btn btnsm" onclick="ofxSelGrupo('${tipo}',true)">Marcar ${tipo==='entrada'?'entradas':'saídas'}</button>
-          <button class="btn btnsm" onclick="ofxSelGrupo('${tipo}',false)">Limpar</button>
-        </span>`:''}
-      </div>
+      <div class="ctitle" style="border-left:3px solid ${cor};padding-left:9px">${titulo} · ${itens.length} · ${money(totalG)}</div>
       ${itens.map(x=>renderItem(x.item,x.i)).join('')}
     </div>`;
     return h;
@@ -2245,19 +2281,52 @@ function renderConcil(){
   el.innerHTML=head+(gEnt+gSai||'<div class="empty">Nenhuma transação neste filtro</div>');
 }
 /* marca/desmarca todos os NOVOS de um grupo (entrada ou saída) */
-function ofxSelGrupo(tipo,on){OFXLIST.forEach(it=>{if(it.status==='new'&&it.tipo===tipo)it.sel=on;});renderConcil();}
+function ofxSelGrupo(tipo,on){OFXLIST.forEach(it=>{if(it.status==='new'&&!it.ignorado&&it.tipo===tipo)it.sel=on;});renderConcil();}
+/* ✦ Conciliar automaticamente: re-roda o matching e importa tudo que casou não é preciso;
+   aqui, importa automaticamente os NOVOS de alta confiança (mesmo valor e data exata já casados viram 'ok').
+   Como 'ok' já não duplica, o auto foca em recalcular o casamento. */
+function conciliarAuto(){
+  if(!OFXLIST.length){alert('Importe um extrato primeiro.');return;}
+  conciliar();
+  const jaConc=OFXLIST.filter(i=>i.status==='ok').length;
+  renderConcil();
+  alert('Conciliação automática concluída.\n\n'+jaConc+' transação(ões) reconhecida(s) como já lançada(s) no sistema (não serão duplicadas).\n\nAs demais aparecem como "Novo" para você conferir, categorizar e importar.');
+}
+/* Categorizar em massa: aplica uma categoria a todos os NOVOS selecionados */
+function categorizarMassa(){
+  const sel=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado&&i.sel);
+  if(!sel.length){alert('Marque as transações que deseja categorizar.');return;}
+  const temEnt=sel.some(i=>i.tipo==='entrada'),temSai=sel.some(i=>i.tipo==='saida');
+  const lista=temEnt&&!temSai?CAT_ENTRADA_():(!temEnt&&temSai?CAT_SAIDA_():[...new Set([...CAT_ENTRADA_(),...CAT_SAIDA_()])]);
+  const cat=prompt('Categoria a aplicar nas '+sel.length+' transação(ões) selecionada(s):\n\nOpções: '+lista.join(', '));
+  if(!cat)return;
+  sel.forEach(i=>i.cat=cat.trim());
+  renderConcil();
+}
+/* Baixa automática: importa todos os NOVOS selecionados de uma vez (atalho do Conciliar) */
+function baixaAutomatica(){importSelecionados();}
+/* Ignorar: marca os selecionados como ignorados (não entram no fluxo, saem da lista de pendentes) */
+function ignorarSelecionados(){
+  const sel=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado&&i.sel);
+  if(!sel.length){alert('Marque as transações que deseja ignorar.');return;}
+  if(!confirm('Ignorar '+sel.length+' transação(ões)? Elas não serão importadas nem contarão como pendentes.'))return;
+  sel.forEach(i=>{i.ignorado=true;i.sel=false;});
+  renderConcil();
+}
 /* importa apenas os itens NOVOS marcados (em lote), com a categoria escolhida */
 function importSelecionados(){
-  const novos=OFXLIST.filter(i=>i.status==='new'&&i.sel);
-  if(!novos.length){alert('Marque ao menos uma transação para importar.');return;}
+  const novos=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado&&i.sel);
+  if(!novos.length){alert('Marque ao menos uma transação para conciliar/importar.');return;}
   if(!confirm('Importar '+novos.length+' transação(ões) selecionada(s) para o fluxo de caixa?'))return;
   let caixaId=isFull()?(CAIXA_FILTER!=='__all__'&&CAIXA_FILTER!=='__none__'?CAIXA_FILTER:''):CCX;
   novos.forEach(item=>{
-    S.flux.push({id:uid(),d:item.d,desc:item.memo,cat:item.cat||(item.tipo==='entrada'?'Recebimentos':'Outras Despesas'),tipo:item.tipo,val:item.val,placa:'',motorista:'',caixaId,by:CU,byId:CUID,t:new Date().toISOString()});
-    item.status='ok';item.sel=false;
+    S.flux.push({id:uid(),d:item.d,desc:item.memo,cat:item.cat||(item.tipo==='entrada'?'Recebimentos':'Outras Despesas'),cc:'',tipo:item.tipo,val:item.val,placa:'',motorista:'',caixaId,origem:'conciliacao',by:CU,byId:CUID,t:new Date().toISOString()});
+    if(item.cat&&item.memo)aprdCategoria(item.memo,item.cat); // aprende categoria
+    item.status='ok';item.sel=false;item.matchDesc='importado agora';
   });
-  log('Importou '+novos.length+' lançamentos via OFX (conciliação)');save();renderConcil();renderFluxo();renderDash();
-  alert(novos.length+' lançamento(s) importado(s) com sucesso.');
+  const mt=document.getElementById('concilMarcarTodos');if(mt)mt.checked=false;
+  log('Conciliou/importou '+novos.length+' lançamentos via extrato');save();renderConcil();renderFluxo();renderDash();
+  alert(novos.length+' lançamento(s) conciliado(s) e importado(s) com sucesso.');
 }
 
 /* ── RENDER ALL ── */
@@ -2595,6 +2664,7 @@ Object.assign(window,{
   askPin,backToPicker,delBoleto,delCaixa,delPagar,delReceber,delVeic,dropOFX,
   exportRelatorioCSV,fileOFX,gerarRelatorio,logout,
   ofxSetCat,ofxToggle,ofxSelAll,ofxSelGrupo,filterC,importSelecionados,
+  conciliarAuto,categorizarMassa,baixaAutomatica,ignorarSelecionados,
   onDcfTipoChange,onRoleChange,openVeicForm,pagarBoleto,pagarConta,pinClear,
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
