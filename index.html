@@ -412,7 +412,7 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input id="rc_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px"><button class="btn btnsm" onclick="buscarCNPJReceber()">🔎 CNPJ</button></div>
             <div class="ir"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="rc_desc" placeholder="Descrição" oninput="autoCat('rc')"></div>
-            <div class="ir"><select id="rc_cat"></select><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input id="rc_cat" list="rc_cat_list" placeholder="Categoria (escolha ou digite uma nova)"><datalist id="rc_cat_list"></datalist><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
             <div class="ir"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="rc_recorr" onchange="document.getElementById('rc_nrec').style.display=this.value==='unica'?'none':'block'">
@@ -452,7 +452,7 @@ textarea{resize:vertical;min-height:60px}
               <button class="btn btnsm" onclick="buscarCNPJPagar()">🔎 CNPJ</button>
             </div>
             <div class="ir"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="pg_desc" placeholder="Descrição" oninput="autoCat('pg')"></div>
-            <div class="ir"><select id="pg_cat"></select><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><input id="pg_cat" list="pg_cat_list" placeholder="Categoria (escolha ou digite uma nova)"><datalist id="pg_cat_list"></datalist><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
             <div class="ir"><input id="pg_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="pg_recorr" onchange="document.getElementById('pg_nrec').style.display=this.value==='unica'?'none':'block'">
@@ -1025,7 +1025,7 @@ async function cloudInit(){
 const KEY='nipihub_fin_v3';
 const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},socios:[],users:[],mem:[],hist:[]};
 let S={...DEF};
-let CU='',CUID='',CD='',CR='',CA=[],CCX='';  // current user name, id, dept, role, access, caixaId
+let CU='',CUID='',CD='',CR='',CA=[],CPAGES=null,CCX='';  // current user name, id, dept, role, access, custom pages, caixaId
 let CAIXA_FILTER='__all__';            // filtro de caixa selecionado (telas de visão completa)
 
 /* ── PAPÉIS ──
@@ -1201,7 +1201,11 @@ function initials(name){return (name||'?').trim().split(/\s+/).map(w=>w[0]||'').
 function days(d){const t=new Date(d+'T12:00:00'),h=new Date();h.setHours(0,0,0,0);return Math.round((t-h)/86400000)}
 function isFull(){return CR==='operacional'||CR==='dona'||CR==='gestor'}  // visão completa de finanças
 /* quem enxerga a tela e os valores das Movimentações Pessoais: Edson (gestor), Janaína (operacional/financeiro), Auricélia (dona) */
-function canSeeSocios(){return CR==='gestor'||CR==='operacional'||CR==='dona'}
+function canSeeSocios(){
+  if(CR==='gestor')return true;
+  // operacional/dona: só se a página de Movimentações Pessoais estiver liberada para este usuário
+  return (CR==='operacional'||CR==='dona')&&allowedPages().includes('socios');
+}
 
 /* ── LOGIN: seletor de perfis ── */
 function renderProfiles(){
@@ -1265,14 +1269,18 @@ document.addEventListener('keydown',e=>{
 
 /* ── permissões de páginas ── */
 function allowedPages(){
-  if(CR==='gestor')return PAGES_ADMIN;
-  if(CR==='operacional'||CR==='dona')return PAGES_FULL;
+  if(CR==='gestor')return PAGES_ADMIN; // gestor sempre vê tudo (evita trancar-se fora)
+  if(CR==='operacional'||CR==='dona'){
+    // páginas personalizadas pelo gestor para este usuário; sem personalização = todas
+    if(Array.isArray(CPAGES)&&CPAGES.length)return PAGES_FULL.filter(p=>CPAGES.includes(p));
+    return PAGES_FULL;
+  }
   // membro: só o que o gestor liberou (dashboard próprio / fluxo próprio)
   return (CA||[]).filter(id=>ALLMODS.includes(id));
 }
 
 function startSession(u){
-  CU=u.name;CUID=u.user;CD=u.area||'diretoria';CR=u.role||'membro';CA=Array.isArray(u.access)?u.access:[...ALLMODS];CCX=u.caixaId||'';
+  CU=u.name;CUID=u.user;CD=u.area||'diretoria';CR=u.role||'membro';CA=Array.isArray(u.access)?u.access:[...ALLMODS];CPAGES=Array.isArray(u.pages)?u.pages:null;CCX=u.caixaId||'';
   CAIXA_FILTER='__all__';
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
@@ -1873,12 +1881,13 @@ function importarNF(e){
 
 /* ════════ CONTAS A RECEBER ════════ */
 function addReceber(){
-  const cli=v('rc_cli').trim(),venc=vData('rc_venc'),desc=v('rc_desc').trim(),cat=v('rc_cat'),val=parseFloat(v('rc_val'));
+  const cli=v('rc_cli').trim(),venc=vData('rc_venc'),desc=v('rc_desc').trim(),val=parseFloat(v('rc_val'));
   const cc=v('rc_cc').trim(),juros=parseFloat(v('rc_juros'))||0,multa=parseFloat(v('rc_multa'))||0;
   const recorr=v('rc_recorr')||'unica',nrec=parseInt(v('rc_nrec'))||1;
   if(!cli){toast('Informe o cliente.','err');return;}
   if(!venc){toast('Informe o vencimento.','err');return;}
   if(!val||val<=0){toast('Informe um valor válido.','err');return;}
+  const cat=garanteCategoria(v('rc_cat'),'entrada'); // nova categoria é cadastrada automaticamente
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
   const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
@@ -1910,7 +1919,7 @@ function cobrar(id){
 }
 function renderReceber(){
   const mg=document.getElementById('rc_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
-  const sel=document.getElementById('rc_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_ENTRADA_(),cur);}
+  const dl=document.getElementById('rc_cat_list');if(dl)dl.innerHTML=CAT_ENTRADA_().map(x=>`<option value="${esc(x)}">`).join('');
   renderCCList();
   const abertos=S.receber.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
@@ -1932,12 +1941,13 @@ function renderReceber(){
 
 /* ════════ CONTAS A PAGAR ════════ */
 function addPagar(){
-  const forn=v('pg_forn').trim(),venc=vData('pg_venc'),desc=v('pg_desc').trim(),cat=v('pg_cat'),val=parseFloat(v('pg_val'));
+  const forn=v('pg_forn').trim(),venc=vData('pg_venc'),desc=v('pg_desc').trim(),val=parseFloat(v('pg_val'));
   const cc=v('pg_cc').trim(),juros=parseFloat(v('pg_juros'))||0,multa=parseFloat(v('pg_multa'))||0;
   const recorr=v('pg_recorr')||'unica',nrec=parseInt(v('pg_nrec'))||1;
   if(!forn){toast('Informe o fornecedor.','err');return;}
   if(!venc){toast('Informe o vencimento.','err');return;}
   if(!val||val<=0){toast('Informe um valor válido.','err');return;}
+  const cat=garanteCategoria(v('pg_cat'),'saida'); // nova categoria é cadastrada automaticamente
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
   const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
@@ -1958,7 +1968,7 @@ function pagarConta(id){
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;removerComDesfazer('pagar',id,renderPagar,'Conta a pagar de '+(c.forn||'—'));}
 function renderPagar(){
   const mg=document.getElementById('pg_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
-  const sel=document.getElementById('pg_cat');if(sel){const cur=sel.value;sel.innerHTML=catOptions(CAT_SAIDA_(),cur);}
+  const dl=document.getElementById('pg_cat_list');if(dl)dl.innerHTML=CAT_SAIDA_().map(x=>`<option value="${esc(x)}">`).join('');
   renderCCList();
   const abertos=S.pagar.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
@@ -2363,6 +2373,20 @@ function setUserField(uid_,field,val){
   log('Gestor editou usuário: '+u.name);save();renderUsers();renderEquipa();renderProfiles();
 }
 function toggleUserMod(uid_,mod,on){const u=S.users.find(x=>x.user===uid_);if(!u)return;u.access=u.access||[];if(on){if(!u.access.includes(mod))u.access.push(mod);}else{u.access=u.access.filter(m=>m!==mod);}save();}
+/* gestor escolhe quais páginas um usuário operacional/dona vê */
+function toggleUserPage(uid_,pid,on){
+  const u=S.users.find(x=>x.user===uid_);if(!u)return;
+  // inicia da lista completa na primeira personalização
+  if(!Array.isArray(u.pages)||!u.pages.length)u.pages=[...PAGES_FULL];
+  if(on){
+    if(!u.pages.includes(pid))u.pages.push(pid);
+  }else{
+    if(u.pages.length<=1){toast('O usuário precisa ver ao menos uma página.','err');renderUsers();return;}
+    u.pages=u.pages.filter(p=>p!==pid);
+  }
+  log('Ajustou páginas de '+u.name+': '+(on?'+ ':'− ')+pid);
+  save();renderUsers();
+}
 function removeUser(uid_){
   const u=S.users.find(x=>x.user===uid_);if(!u)return;
   if(u.role==='gestor'&&S.users.filter(x=>x.role==='gestor').length<=1){toast('Não pode remover o único gestor administrador.','err');return;}
@@ -2372,9 +2396,20 @@ function removeUser(uid_){
 function renderUsers(){
   const el=document.getElementById('userlist');if(!el)return;
   if(!S.users.length){el.innerHTML='<div class="empty">Nenhum usuário</div>';return;}
+  const PAGE_LABEL={};NAV.forEach(n=>PAGE_LABEL[n.id]=n.l);
   el.innerHTML=S.users.map(u=>{
     const isMembro=u.role==='membro';
-    const mods=isMembro?MODS.map(m=>`<label class="modchk"><input type="checkbox" ${(u.access||[]).includes(m.id)?'checked':''} onchange="toggleUserMod('${u.user}','${m.id}',this.checked)">${esc(m.l)}</label>`).join(''):`<span style="font-size:12px;color:var(--t2)">Visão completa de finanças${u.role==='gestor'?' + administração do sistema':''}.</span>`;
+    const isFullRole=u.role==='operacional'||u.role==='dona';
+    let mods;
+    if(isMembro){
+      mods=MODS.map(m=>`<label class="modchk"><input type="checkbox" ${(u.access||[]).includes(m.id)?'checked':''} onchange="toggleUserMod('${u.user}','${m.id}',this.checked)">${esc(m.l)}</label>`).join('');
+    }else if(isFullRole){
+      // gestor escolhe quais páginas este usuário vê; sem personalização = todas marcadas
+      const ativas=Array.isArray(u.pages)&&u.pages.length?u.pages:PAGES_FULL;
+      mods=PAGES_FULL.map(pid=>`<label class="modchk"><input type="checkbox" ${ativas.includes(pid)?'checked':''} onchange="toggleUserPage('${u.user}','${pid}',this.checked)">${esc(PAGE_LABEL[pid]||pid)}</label>`).join('');
+    }else{
+      mods=`<span style="font-size:12px;color:var(--t2)">Visão completa de finanças + administração do sistema.</span>`;
+    }
     return`<div class="ucard">
       <div class="uhead">
         <input value="${esc(u.name)}" onchange="setUserField('${u.user}','name',this.value)" style="max-width:180px;font-weight:600">
@@ -2391,7 +2426,7 @@ function renderUsers(){
           <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="removeUser('${u.user}')">Remover</button>
         </div>
       </div>
-      <div class="stitle" style="margin:0 0 5px">${isMembro?'Painéis visíveis para este membro':'Permissões'}</div>
+      <div class="stitle" style="margin:0 0 5px">${isMembro?'Painéis visíveis para este membro':(isFullRole?'Páginas visíveis para este usuário':'Permissões')}</div>
       <div class="modgrid">${mods}</div>
       ${isMembro?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--t2);font-weight:600">Caixa atribuído:</span><select onchange="setUserCaixa('${u.user}',this.value)" style="width:auto;font-size:12px;padding:4px 8px"><option value="">Sem caixa</option>${S.caixas.map(c=>`<option value="${c.id}" ${u.caixaId===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div>`:''}
     </div>`;
@@ -2477,6 +2512,15 @@ function seedCategorias(){
 }
 /* listas dinâmicas a partir de S.categorias */
 function catsByTipo(tipo){return S.categorias.filter(c=>c.tipo===tipo).map(c=>c.nome);}
+/* se a categoria digitada é nova, cadastra automaticamente (aparece nas próximas vezes) */
+function garanteCategoria(nome,tipo){
+  nome=(nome||'').trim();if(!nome)return'';
+  const existe=S.categorias.find(c=>c.nome.toLowerCase()===nome.toLowerCase()&&c.tipo===tipo);
+  if(existe)return existe.nome; // usa a grafia já cadastrada
+  S.categorias.push({id:'cat_'+uid(),nome,tipo,cor:'var(--t3)'});
+  log('Categoria criada automaticamente: '+nome+' ('+(tipo==='entrada'?'receita':'despesa')+')');
+  return nome;
+}
 function catColor(nome){const c=S.categorias.find(x=>x.nome===nome);return c?c.cor:'var(--t3)';}
 function catOptions(lista,sel){return lista.map(c=>`<option value="${c}" ${sel===c?'selected':''}>${esc(c)}</option>`).join('');}
 /* getters compatíveis com o resto do código */
@@ -3477,7 +3521,7 @@ Object.assign(window,{
   onDcfTipoChange,onRoleChange,openVeicForm,pagarBoleto,pagarConta,pinClear,
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
-  setUserCaixa,setUserField,sp,toggleUserMod,updateDcfPreview,zerarDadosFinanceiros,limparMovimentacoes,
+  setUserCaixa,setUserField,sp,toggleUserMod,toggleUserPage,updateDcfPreview,zerarDadosFinanceiros,limparMovimentacoes,
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
   openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
