@@ -237,9 +237,6 @@ textarea{resize:vertical;min-height:60px}
   #concilList .row select{width:100%!important;min-width:0!important}
   #concilList .row>span[style*="inline-flex"]{width:100%;justify-content:flex-start}
   #concilList .row .rlabel{font-size:13px}
-  /* formulário de lançamento: linha da pessoa empilha */
-  #fx_socio_wrap{flex-direction:column;align-items:stretch!important}
-  #fx_socio_wrap select{width:100%}
 }
 /* toasts — notificações discretas */
 #toastWrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:calc(100% - 32px);max-width:420px}
@@ -273,6 +270,13 @@ textarea{resize:vertical;min-height:60px}
 </head>
 <body>
 <div id="toastWrap"></div>
+<div id="anexoOverlay" style="display:none;position:fixed;inset:0;background:rgba(6,12,32,.78);z-index:5000;align-items:center;justify-content:center;padding:18px" onclick="if(event.target===this)fecharAnexo()">
+  <div style="background:var(--grad-surface);border:1px solid var(--border2);border-radius:14px;max-width:min(92vw,760px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)"><div id="anexoTitulo" style="font-weight:600;font-size:14px">Comprovante</div>
+      <div style="display:flex;gap:6px"><button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="removerAnexo()">Remover</button><button class="btn btnsm" onclick="fecharAnexo()">Fechar</button></div></div>
+    <div style="overflow:auto;padding:12px;text-align:center;background:rgba(0,0,0,.25)"><img id="anexoImg" style="max-width:100%;border-radius:8px" alt="Comprovante"></div>
+  </div>
+</div>
 
 <!-- LOGIN -->
 <div id="login">
@@ -347,6 +351,7 @@ textarea{resize:vertical;min-height:60px}
         </div>
         <div id="dashScope"></div>
         <div id="dashOnboarding"></div>
+        <div id="dashOrcamento"></div>
         <div id="dashKpis" class="kpi-grid"></div>
         <div id="dashAlertas"></div>
         <div class="g2">
@@ -366,21 +371,13 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input type="text" id="fx_d" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="fx_desc" placeholder="Descrição"></div>
             <div class="ir">
-              <input id="fx_cat" placeholder="Categoria (ex: Vendas, Salários)" list="fx_cats">
+              <input id="fx_cat" placeholder="Categoria (escolha ou digite uma nova)" list="fx_cats">
               <select id="fx_tipo" onchange="onFxTipoChange()"><option value="entrada">Entrada</option><option value="saida">Saída</option></select>
               <input type="number" id="fx_val" placeholder="Valor (R$)" step="0.01" min="0">
             </div>
             <datalist id="fx_cats"><option>Vendas</option><option>Serviços</option><option>Salários</option><option>Fornecedores</option><option>Impostos</option><option>Aluguel</option><option>Marketing</option><option>Transporte</option><option>Combustível</option><option>Manutenção</option><option>Taxas financeiras / maquininha</option><option>Outros</option></datalist>
             <datalist id="cc_list"></datalist>
             <div class="ir"><select id="fx_conta"></select></div>
-            <div id="fx_socio_wrap" class="ir" style="display:none;align-items:center;gap:10px;background:var(--surface2);padding:8px 10px;border-radius:var(--rs)">
-              <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap">
-                <input type="checkbox" id="fx_retirada" onchange="toggleRetirada()" style="width:16px;height:16px;cursor:pointer">
-                <span id="fx_retirada_lbl">Saída pessoal</span>
-              </label>
-              <select id="fx_socio" style="display:none"></select>
-              <span id="fx_socio_hint" style="font-size:11px;color:var(--t3);display:none">Sai da conta, mas não conta como despesa da empresa.</span>
-            </div>
             <div id="fx_caixa_wrap"></div>
             <button class="btn btnp" onclick="addFlux()">Lançar</button>
           </div>
@@ -393,6 +390,19 @@ textarea{resize:vertical;min-height:60px}
             </div>
           </div>
           <div id="fxCaixaFilter" style="margin-bottom:.6rem"></div>
+          <div class="card" id="transfCard" style="display:none">
+            <div class="ctitle">⇄ Transferência entre contas</div>
+            <div id="saldosContas" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+            <div class="ir" style="align-items:center;flex-wrap:wrap">
+              <input id="tr_d" placeholder="dd/mm/aaaa" maxlength="10" oninput="maskDate(this)" style="width:110px">
+              <select id="tr_de" style="width:auto" title="De"></select>
+              <span style="font-size:15px;color:var(--t3)">→</span>
+              <select id="tr_para" style="width:auto" title="Para"></select>
+              <input type="number" id="tr_val" placeholder="Valor (R$)" step="0.01" min="0" style="width:130px">
+              <button class="btn btnsm btnp" onclick="addTransfer()">Transferir</button>
+            </div>
+            <div style="font-size:11px;color:var(--t3);margin-top:6px">Move o dinheiro entre contas sem contar como receita ou despesa — os relatórios da empresa não mudam.</div>
+          </div>
           <div id="fxTable"><div class="empty">Nenhum lançamento</div></div>
         </div>
       </div>
@@ -864,8 +874,30 @@ textarea{resize:vertical;min-height:60px}
           </div>
           <div class="card"><div class="ctitle">Categorias de Receita</div><div id="catListEntrada"><div class="empty">Nenhuma</div></div></div>
           <div class="card"><div class="ctitle">Categorias de Despesa</div><div id="catListSaida"><div class="empty">Nenhuma</div></div></div>
+          <div class="card" style="border-left:3px solid var(--gr)">
+            <div class="ctitle">Orçamento mensal por categoria</div>
+            <p style="font-size:12.5px;color:var(--t2);margin-bottom:8px">Defina um teto de gasto mensal para as categorias de despesa que quiser acompanhar. O dashboard mostra o quanto do orçamento já foi usado no mês. Deixe em branco (ou 0) para não acompanhar.</p>
+            <div id="orcamentoList"><div class="empty">Cadastre categorias de despesa primeiro.</div></div>
+          </div>
         </div>
         <div id="cfg2" class="sp">
+          <div class="card" style="border-left:3px solid var(--com)">
+            <div class="ctitle">Fechamento de período</div>
+            <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Um mês fechado fica <strong>travado</strong>: ninguém lança, edita ou remove movimentações nele (nem pela conciliação) até você reabrir. Feche o mês depois de conferir os números — protege os relatórios já apresentados.</p>
+            <div class="ir" style="align-items:center">
+              <input type="month" id="fech_mes" style="width:auto">
+              <button class="btn btnsm btnp" onclick="fecharMes()">🔒 Fechar mês</button>
+            </div>
+            <div id="fechadosList" style="margin-top:10px"></div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--gr)">
+            <div class="ctitle">Backup e restauração</div>
+            <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Baixe um arquivo com <strong>todos os dados do sistema</strong> (lançamentos, contas, caixas, usuários, configurações). Guarde em local seguro — é a sua garantia contra qualquer perda. Apenas o gestor pode exportar.</p>
+            <button class="btn btnsm btnp" style="margin-right:8px" onclick="exportBackup()">⬇ Exportar backup completo</button>
+            <button class="btn btnsm" onclick="document.getElementById('backupFile').click()">⬆ Restaurar de um backup</button>
+            <input type="file" id="backupFile" accept=".json,application/json" style="display:none" onchange="importBackup(this.files[0]);this.value=''">
+            <p style="font-size:11.5px;color:var(--t3);margin-top:8px">A restauração substitui os dados atuais pelos do arquivo (será pedido que digite <strong>RESTAURAR</strong>). Vale para a nuvem e todos os aparelhos.</p>
+          </div>
           <div class="card" style="border-color:var(--dng)">
             <div class="ctitle" style="color:var(--dngt)">Zona de risco</div>
             <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Limpar <strong>só as movimentações</strong> (lançamentos, contas a receber/pagar, boletos, extrato) — ideal para testes e demonstrações. <strong>Mantém</strong> usuários, caixas, contas bancárias, pessoas e categorias. Para confirmar, será pedido que digite <strong>LIMPAR</strong>.</p>
@@ -909,7 +941,7 @@ textarea{resize:vertical;min-height:60px}
    FIREBASE · sincronização em nuvem (Firestore)
 ════════════════════════════════════════ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
@@ -1023,7 +1055,7 @@ async function cloudInit(){
    Papéis: gestor (admin) · operacional · dona · membro
 ════════════════════════════════════════ */
 const KEY='nipihub_fin_v3';
-const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},socios:[],users:[],mem:[],hist:[]};
+const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},socios:[],users:[],mem:[],hist:[],fechados:[],orcamentos:{}};
 let S={...DEF};
 let CU='',CUID='',CD='',CR='',CA=[],CPAGES=null,CCX='';  // current user name, id, dept, role, access, custom pages, caixaId
 let CAIXA_FILTER='__all__';            // filtro de caixa selecionado (telas de visão completa)
@@ -1067,6 +1099,8 @@ function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.par
     seedCategorias().forEach(sc=>{if(!nomes.has(sc.nome.toLowerCase()+'|'+sc.tipo))S.categorias.push(sc);});
   }
   if(!S.socios.length)S.socios=[{id:'so_auricelia',nome:'Auricélia',t:new Date().toISOString()}];
+  if(!Array.isArray(S.fechados))S.fechados=[];
+  if(!S.orcamentos||typeof S.orcamentos!=='object')S.orcamentos={};
   // Dados de exemplo removidos — sistema sobe vazio para os dados reais.
   // (veículos, caixas e lançamentos são criados pelo usuário no app)
   S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(!u.pin)u.pin='0000';if(u.caixaId===undefined)u.caixaId='';});
@@ -1201,6 +1235,13 @@ function initials(name){return (name||'?').trim().split(/\s+/).map(w=>w[0]||'').
 function days(d){const t=new Date(d+'T12:00:00'),h=new Date();h.setHours(0,0,0,0);return Math.round((t-h)/86400000)}
 function isFull(){return CR==='operacional'||CR==='dona'||CR==='gestor'}  // visão completa de finanças
 /* quem enxerga a tela e os valores das Movimentações Pessoais: Edson (gestor), Janaína (operacional/financeiro), Auricélia (dona) */
+/* fechamento de período: meses fechados não aceitam lançar/editar/remover */
+function mesFechado(d){return (S.fechados||[]).includes((d||'').slice(0,7));}
+function bloqueiaMesFechado(d){
+  if(!mesFechado(d))return false;
+  toast('O mês '+monthLabel((d||'').slice(0,7))+' está fechado. Reabra em Configurações → Fechamento para alterar.','err');
+  return true;
+}
 function canSeeSocios(){
   if(CR==='gestor')return true;
   // operacional/dona: só se a página de Movimentações Pessoais estiver liberada para este usuário
@@ -1366,10 +1407,12 @@ document.addEventListener('click',e=>{
 function caixaNome(id){const c=S.caixas.find(x=>x.id===id);return c?c.nome:(id?'Caixa':'Sem caixa');}
 function caixaCor(id){const c=S.caixas.find(x=>x.id===id);return c?c.cor:'var(--t3)';}
 function addFlux(){
-  const d=vData('fx_d'),desc=v('fx_desc').trim(),cat=v('fx_cat').trim(),tipo=v('fx_tipo')||'entrada',val=parseFloat(v('fx_val'));
+  const d=vData('fx_d'),desc=v('fx_desc').trim(),tipo=v('fx_tipo')||'entrada',val=parseFloat(v('fx_val'));
   if(!d){toast('Informe a data.','err');return;}
   if(!desc){toast('Informe a descrição.','err');return;}
   if(!val||val<=0||isNaN(val)){toast('Informe um valor válido.','err');return;}
+  if(bloqueiaMesFechado(d))return;
+  const cat=garanteCategoria(v('fx_cat'),tipo); // nova categoria é cadastrada automaticamente
   // caixa: membro usa o seu; visão completa usa o filtro ativo (ou o select)
   let caixaId=CCX;
   if(isFull()){const sel=document.getElementById('fx_caixa_sel');caixaId=sel?sel.value:(CAIXA_FILTER!=='__all__'?CAIXA_FILTER:'');}
@@ -1392,6 +1435,7 @@ function removeFlux(id){
   const e=S.flux.find(x=>x.id===id);if(!e)return;
   // membro só remove lançamento do próprio caixa
   if(!isFull()&&e.byId!==CUID){toast('Você só pode remover lançamentos do seu próprio caixa.','err');return;}
+  if(bloqueiaMesFechado(e.d))return;
   removerComDesfazer('flux',id,()=>{renderFluxo();renderSociosConta&&renderSociosConta();},(e.tipo==='entrada'?'Entrada':'Saída')+' "'+(e.desc||'—')+'"');
 }
 /* ── EDIÇÃO DE LANÇAMENTO ── */
@@ -1426,6 +1470,7 @@ function closeEditLanc(){EDIT_ID=null;document.getElementById('editModal').class
 function saveEditLanc(){
   const e=S.flux.find(x=>x.id===EDIT_ID);if(!e){closeEditLanc();return;}
   const d=vData('ed_d');if(!d){toast('Data inválida. Use dd/mm/aaaa.','err');return;}
+  if(bloqueiaMesFechado(e.d)||bloqueiaMesFechado(d))return;
   const desc=document.getElementById('ed_desc').value.trim();if(!desc){toast('Informe a descrição.','err');return;}
   const val=parseFloat(document.getElementById('ed_val').value);if(!val||val<=0){toast('Informe um valor válido.','err');return;}
   e.d=d;e.tipo=document.getElementById('ed_tipo').value;e.desc=desc;
@@ -1468,8 +1513,9 @@ function buildMonthSelect(entries,current){
 }
 function renderFluxo(){
   const dd=document.getElementById('fx_d');if(dd&&!dd.value)dd.value=hojeBR();
-  const dl=document.getElementById('fx_cats');if(dl)dl.innerHTML=S.categorias.map(c=>`<option>${esc(c.nome)}</option>`).join('');
+  renderFxCats();
   renderContaSelect();
+  renderTransferCard();
   onFxTipoChange();
   // escopo do fluxo
   renderCaixaFilter('fxCaixaFilter');
@@ -1478,7 +1524,7 @@ function renderFluxo(){
   if(sub)sub.textContent=isFull()?'Visão completa — lançamentos de todos os caixas.':'Seu caixa pessoal — apenas seus lançamentos.';
   const base=scopedFlux();
   const all=[...base].sort((a,b)=>((a.d+'|'+a.t)<(b.d+'|'+b.t)?-1:1));
-  let run=0;const withBal=all.map(e=>{run+=(e.tipo==='entrada'?e.val:-e.val);return{...e,bal:run};});
+  let run=0;const withBal=all.map(e=>{run+=(e.tipo==='entrada'?e.val:(e.tipo==='saida'?-e.val:0));return{...e,bal:run};});
   const saldo=run;
   const mk=v('fx_month');const q=v('fx_search');
   let view=withBal;
@@ -1496,11 +1542,11 @@ function renderFluxo(){
   const disp=[...view].reverse();
   const tb=document.getElementById('fxTable');
   if(tb)tb.innerHTML=disp.length?disp.map(e=>`<div class="row">
-    <div style="flex:1;min-width:0"><div class="rlabel">${esc(e.desc||'—')}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.caixaId?' · <span style="color:'+caixaCor(e.caixaId)+'">●</span> '+esc(caixaNome(e.caixaId)):''}${e.contaId?' · 🏦 '+esc(contaNome(e.contaId)):''}${isFull()?' · <strong>'+esc(e.by||'')+'</strong>':''}</div></div>
+    <div style="flex:1;min-width:0"><div class="rlabel">${e.tipo==='transf'?'⇄ ':''}${esc(e.desc||'—')}</div><div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.caixaId?' · <span style="color:'+caixaCor(e.caixaId)+'">●</span> '+esc(caixaNome(e.caixaId)):''}${e.contaId?' · 🏦 '+esc(contaNome(e.contaId)):''}${isFull()?' · <strong>'+esc(e.by||'')+'</strong>':''}</div></div>
     <div class="rright">
-      <span style="font-size:13px;font-weight:600;color:${e.tipo==='entrada'?'var(--pos)':'var(--peace)'}">${e.tipo==='entrada'?'+':'−'} ${money(e.val)}</span>
+      <span style="font-size:13px;font-weight:600;color:${e.tipo==='entrada'?'var(--pos)':(e.tipo==='transf'?'var(--com)':'var(--peace)')}">${e.tipo==='entrada'?'+ ':(e.tipo==='transf'?'⇄ ':'− ')}${money(e.val)}</span>
       <span class="rsub mono" style="min-width:96px;text-align:right">Saldo: ${money(e.bal)}</span>
-      ${(isFull()||e.byId===CUID)?`<button class="btn btnsm" onclick="openEditLanc('${e.id}')" title="Editar">✎</button><button class="btn btnsm" onclick="removeFlux('${e.id}')" title="Remover">✕</button>`:''}
+      ${(isFull()||e.byId===CUID)?`${e.anexo?`<button class="btn btnsm" style="border-color:var(--gr)" onclick="verComprovante('${e.id}')" title="Ver comprovante">📎</button>`:`<button class="btn btnsm" style="opacity:.65" onclick="anexarComprovante('${e.id}')" title="Anexar comprovante">📎</button>`}${e.tipo!=='transf'?`<button class="btn btnsm" onclick="openEditLanc('${e.id}')" title="Editar">✎</button>`:''}<button class="btn btnsm" onclick="removeFlux('${e.id}')" title="Remover">✕</button>`:''}
     </div></div>`).join(''):emptyState('📊','Nenhum lançamento ainda','As entradas e saídas que você registrar aparecem aqui. Use o formulário acima para lançar a primeira.');
   buildMonthSelect(withBal,mk);
   buildCaixaSelect();
@@ -1568,7 +1614,7 @@ function renderDash(){
   if(dd)dd.textContent='Visão rápida da situação financeira · '+toBR(new Date().toISOString().slice(0,10));
   renderOnboarding();
   const all=scopedFlux();
-  const saldo=all.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:-e.val),0); // saldo real da conta (inclui retiradas)
+  const saldo=all.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:(e.tipo==='saida'?-e.val:0)),0); // saldo real (transferências internas não mudam o total)
   const cm=new Date().toISOString().slice(0,7);
   // receitas/despesas da EMPRESA excluem retiradas de sócio (pessoal)
   const mEnt=all.filter(e=>e.tipo==='entrada'&&!e.pessoal&&e.d.slice(0,7)===cm).reduce((s,e)=>s+e.val,0);
@@ -1595,6 +1641,7 @@ function renderDash(){
     +(canSeeSocios()&&mRetiradas!==0?met('Movimentações pessoais',money(mRetiradas),'var(--mkt)','Saídas pessoais no mês'):'')
     +met('Caixa projetado',money(projetado),projetado>=0?'var(--pos)':'var(--neg)','Saldo + a receber − a pagar');
   renderDashChart(all,cm);
+  renderDashOrcamento();
   renderVencimentos();
   renderAlertas();
 }
@@ -1801,7 +1848,7 @@ function alertasInteligentes(){
   const out=[];
   const hoje=new Date().toISOString().slice(0,10);
   // saldo atual consolidado
-  const saldo=S.flux.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:-e.val),0);
+  const saldo=S.flux.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:(e.tipo==='saida'?-e.val:0)),0);
   // projeção 30 dias: + a receber em aberto - a pagar em aberto no período
   const lim=new Date();lim.setDate(lim.getDate()+30);const limISO=lim.toISOString().slice(0,10);
   const aReceber=S.receber.filter(c=>c.status==='aberto'&&c.venc<=limISO).reduce((s,c)=>s+c.val,0);
@@ -1900,6 +1947,7 @@ function addReceber(){
 }
 function receberConta(id){
   const c=S.receber.find(x=>x.id===id);if(!c)return;
+  if(bloqueiaMesFechado(new Date().toISOString().slice(0,10)))return;
   const acr=acrescimo(c);const total=c.val+acr;
   c.status='recebido';c.recebidoEm=new Date().toISOString().slice(0,10);c.valRecebido=total;
   S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Recebimentos',cc:c.cc||'',tipo:'entrada',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
@@ -1960,6 +2008,7 @@ function addPagar(){
 }
 function pagarConta(id){
   const c=S.pagar.find(x=>x.id===id);if(!c)return;
+  if(bloqueiaMesFechado(new Date().toISOString().slice(0,10)))return;
   const acr=acrescimo(c);const total=c.val+acr;
   c.status='pago';c.pagoEm=new Date().toISOString().slice(0,10);c.valPago=total;
   S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Pagamentos',cc:c.cc||'',tipo:'saida',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
@@ -2104,11 +2153,29 @@ function renderComissoes(){
           <div style="font-size:22px;font-weight:700;color:var(--com)">${money(d.comissao)}</div>
         </div>
       </div>
-      <div class="ir" style="margin-top:10px;gap:20px;font-size:13px">
+      <div class="ir" style="margin-top:10px;gap:14px;font-size:13px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--t2)">Recebido no período: <strong style="color:var(--pos)">${money(d.recebido)}</strong></span>
         <span style="color:var(--t2)">Cálculo: <strong>${money(d.recebido)} × ${d.pct}%</strong></span>
+        <span style="flex:1"></span>
+        ${d.comissao>0?`<button class="btn btnsm" style="border-color:var(--com);color:var(--warnt)" onclick="gerarContaComissao('${d.id}')">📄 Gerar conta a pagar</button>`:''}
       </div>
     </div>`).join('');
+}
+/* transforma a comissão calculada do período numa conta a pagar */
+function gerarContaComissao(caixaId){
+  const per=v('com_per')||'mes';
+  const d=dadosComissoes(per).find(x=>x.id===caixaId);
+  if(!d||d.comissao<=0){toast('Nada a gerar para este caixa no período.','err');return;}
+  const forn=d.parceria||('Parceria — '+d.nome);
+  const descr='Comissão '+d.pct+'% de '+labelPeriodo(per)+' — caixa '+d.nome;
+  // evita duplicar: mesma descrição em aberto
+  if(S.pagar.find(p=>p.status==='aberto'&&p.desc===descr)){toast('Já existe uma conta a pagar em aberto desta comissão/período.','err');return;}
+  if(!confirm('Gerar conta a pagar de '+money(d.comissao)+' para "'+forn+'"?\n\n'+descr+'\nVencimento: 7 dias.'))return;
+  const venc=new Date();venc.setDate(venc.getDate()+7);
+  const cat=garanteCategoria('Comissões de parceria','saida');
+  S.pagar.push({id:uid(),forn,venc:venc.toISOString().slice(0,10),desc:descr,cat,cc:'',val:+d.comissao.toFixed(2),juros:0,multa:0,status:'aberto',origem:'comissao',by:CU,t:new Date().toISOString()});
+  log('Gerou conta a pagar de comissão: '+forn+' ('+money(d.comissao)+')');save();renderPagar();
+  toast('Conta a pagar criada: '+forn+' — '+money(d.comissao)+' (venc. 7 dias).','ok');
 }
 function imprimirComissoes(){
   const per=v('com_per')||'mes';
@@ -2156,11 +2223,12 @@ function renderContaList(){
   const el=document.getElementById('contaList');if(!el)return;
   if(!S.contas.length){el.innerHTML=emptyState('🏦','Nenhuma conta bancária','Cadastre os bancos da empresa (BB, Sicoob, Caixa). Ao lançar, você escolhe em qual conta o dinheiro entrou ou saiu.');return;}
   el.innerHTML=S.contas.map(c=>{
-    const nLanc=S.flux.filter(e=>e.contaId===c.id).length;
+    const nLanc=S.flux.filter(e=>e.contaId===c.id||e.contaDe===c.id||e.contaPara===c.id).length;
+    const sc=saldoConta(c.id);
     return`<div class="row">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <span style="flex-shrink:0">🏦</span>
-        <div style="min-width:0"><input value="${esc(c.nome)}" onchange="renameConta('${c.id}',this.value)" style="font-weight:600;max-width:260px"><div class="rsub">${nLanc} lançamento(s)</div></div>
+        <div style="min-width:0"><input value="${esc(c.nome)}" onchange="renameConta('${c.id}',this.value)" style="font-weight:600;max-width:260px"><div class="rsub">${nLanc} lançamento(s) · saldo <strong style="color:${sc>=0?'var(--pos)':'var(--neg)'}">${money(sc)}</strong></div></div>
       </div>
       <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="delConta('${c.id}')">Remover</button>
     </div>`;
@@ -2198,19 +2266,25 @@ function renderSocioSelect(){
   el.innerHTML='<option value="">Selecione a pessoa…</option>'+S.socios.map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join('');
   el.value=cur||'';
 }
+/* preenche o datalist de categorias do fluxo conforme o tipo escolhido */
+function renderFxCats(){
+  const dl=document.getElementById('fx_cats');if(!dl)return;
+  const tipo=v('fx_tipo')||'entrada';
+  dl.innerHTML=(tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_()).map(n=>`<option value="${esc(n)}">`).join('');
+}
 /* mostra/oculta a linha de retirada conforme o tipo (saída=retirada, entrada=devolução) */
 function onFxTipoChange(){
+  renderFxCats(); // categoria acompanha o tipo
   const tipo=v('fx_tipo');
   const wrap=document.getElementById('fx_socio_wrap');
   const lbl=document.getElementById('fx_retirada_lbl');
   if(wrap)wrap.style.display='flex';
   if(lbl)lbl.textContent=tipo==='saida'?'Saída pessoal':'Entrada pessoal';
-  const hint=document.getElementById('fx_socio_hint');
-  if(hint&&hint.style.display!=='none')hint.textContent=tipo==='saida'?'Sai da conta, mas não conta como despesa da empresa.':'Entra na conta como reposição da pessoa (abate o saldo dela).';
 }
 /* liga/desliga o seletor de sócio */
 function toggleRetirada(){
-  const on=document.getElementById('fx_retirada').checked;
+  const chk=document.getElementById('fx_retirada');if(!chk)return; // opção removida do form manual (fica só na conciliação)
+  const on=chk.checked;
   const sel=document.getElementById('fx_socio'),hint=document.getElementById('fx_socio_hint');
   if(sel){sel.style.display=on?'':'none';renderSocioSelect();}
   if(hint)hint.style.display=on?'':'none';
@@ -2442,6 +2516,204 @@ function renderEquipa(){
 }
 
 /* ── RESET ── */
+/* ── COMPROVANTES (anexo de imagem por lançamento) ── */
+const ANEXO_LS='nipihub_anexos_v1';
+let ANEXO_ATUAL=null;
+function anexoDocRef(id){return doc(FB_DB,'auricelia_anexos',id);}
+function lsAnexos(){try{return JSON.parse(localStorage.getItem(ANEXO_LS)||'{}');}catch(e){return{}}}
+function lsAnexoSet(id,obj){const m=lsAnexos();if(obj)m[id]=obj;else delete m[id];try{localStorage.setItem(ANEXO_LS,JSON.stringify(m));}catch(e){toast('Sem espaço neste aparelho para o comprovante.','err');}}
+function anexarComprovante(id){
+  const e=S.flux.find(x=>x.id===id);if(!e)return;
+  if(!isFull()&&e.byId!==CUID){toast('Você só pode anexar nos seus lançamentos.','err');return;}
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{
+    const f=inp.files[0];if(!f)return;
+    const img=new Image();const rd=new FileReader();
+    rd.onload=()=>{img.src=rd.result;};
+    img.onload=()=>{
+      const MAX=1100;let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){const r=Math.min(MAX/w,MAX/h);w=Math.round(w*r);h=Math.round(h*r);}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      let dataUrl=cv.toDataURL('image/jpeg',.72);
+      if(dataUrl.length>900000)dataUrl=cv.toDataURL('image/jpeg',.5);
+      if(dataUrl.length>900000){toast('Imagem grande demais mesmo comprimida — tire a foto mais de perto ou com menos resolução.','err');return;}
+      salvarAnexo(id,dataUrl,f.name);
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+async function salvarAnexo(id,dataUrl,nome){
+  const e=S.flux.find(x=>x.id===id);if(!e)return;
+  let naNuvem=false;
+  if(FB_OK&&FB_READY){
+    try{await setDoc(anexoDocRef(id),{dataUrl,nome:nome||'comprovante',t:Date.now()});naNuvem=true;}
+    catch(err){console.warn('Anexo: nuvem falhou, guardando local',err);}
+  }
+  if(!naNuvem)lsAnexoSet(id,{dataUrl,nome:nome||'comprovante',t:Date.now()});
+  e.anexo=true;
+  log('Anexou comprovante em: '+(e.desc||id));save();renderFluxo();
+  toast('Comprovante anexado'+(naNuvem?' (sincronizado na nuvem).':' — guardado só neste aparelho.'),naNuvem?'ok':'info');
+}
+async function verComprovante(id){
+  const e=S.flux.find(x=>x.id===id);if(!e)return;
+  let an=null;
+  if(FB_OK&&FB_READY){
+    try{const snap=await getDoc(anexoDocRef(id));if(snap.exists())an=snap.data();}catch(err){}
+  }
+  if(!an)an=lsAnexos()[id]||null;
+  if(!an||!an.dataUrl){toast('Comprovante não encontrado (pode ter sido anexado noutro aparelho sem nuvem).','err');return;}
+  ANEXO_ATUAL=id;
+  document.getElementById('anexoImg').src=an.dataUrl;
+  document.getElementById('anexoTitulo').textContent='Comprovante — '+(e.desc||'');
+  document.getElementById('anexoOverlay').style.display='flex';
+}
+function fecharAnexo(){document.getElementById('anexoOverlay').style.display='none';ANEXO_ATUAL=null;}
+async function removerAnexo(){
+  const id=ANEXO_ATUAL;if(!id)return;
+  if(!confirm('Remover este comprovante?'))return;
+  if(FB_OK&&FB_READY){try{await deleteDoc(anexoDocRef(id));}catch(err){}}
+  lsAnexoSet(id,null);
+  const e=S.flux.find(x=>x.id===id);if(e){e.anexo=false;save();}
+  fecharAnexo();renderFluxo();
+  toast('Comprovante removido.','ok');
+}
+/* ── TRANSFERÊNCIAS E SALDO POR CONTA ── */
+/* saldo de uma conta bancária (ou do dinheiro em espécie/sem conta, id='') */
+function saldoConta(id){
+  return S.flux.reduce((s,e)=>{
+    if(e.tipo==='transf'){
+      if((e.contaPara||'')===id)s+=e.val;
+      if((e.contaDe||'')===id)s-=e.val;
+      return s;
+    }
+    if((e.contaId||'')!==id)return s;
+    return s+(e.tipo==='entrada'?e.val:-e.val);
+  },0);
+}
+function addTransfer(){
+  if(!isFull()){toast('Sem permissão para transferir.','err');return;}
+  const d=vData('tr_d'),de=v('tr_de'),para=v('tr_para'),val=parseFloat(v('tr_val'));
+  if(!d){toast('Informe a data.','err');return;}
+  if(de===para){toast('Escolha contas diferentes de origem e destino.','err');return;}
+  if(!val||val<=0||isNaN(val)){toast('Informe um valor válido.','err');return;}
+  if(bloqueiaMesFechado(d))return;
+  const nomeDe=de?contaNome(de):'Espécie/Caixa',nomePara=para?contaNome(para):'Espécie/Caixa';
+  S.flux.push({id:uid(),d,desc:'Transferência: '+nomeDe+' → '+nomePara,cat:'Transferência',tipo:'transf',val,contaDe:de,contaPara:para,by:CU,byId:CUID,t:new Date().toISOString()});
+  log('Transferiu '+money(val)+': '+nomeDe+' → '+nomePara);save();
+  clr('tr_val');renderFluxo();renderDash();renderContaList();
+  toast('Transferência registrada: '+nomeDe+' → '+nomePara+' ('+money(val)+').','ok');
+}
+function renderTransferCard(){
+  const card=document.getElementById('transfCard');if(!card)return;
+  card.style.display=isFull()?'':'none';
+  if(!isFull())return;
+  const opts='<option value="">💵 Espécie/Caixa</option>'+S.contas.map(x=>`<option value="${x.id}">🏦 ${esc(x.nome)}</option>`).join('');
+  const de=document.getElementById('tr_de'),pa=document.getElementById('tr_para');
+  if(de){const c1=de.value;de.innerHTML=opts;de.value=c1;}
+  if(pa){const c2=pa.value;pa.innerHTML=opts;pa.value=c2;}
+  const dd=document.getElementById('tr_d');if(dd&&!dd.value)dd.value=hojeBR();
+  // saldos por conta
+  const el=document.getElementById('saldosContas');if(!el)return;
+  const linhas=[{id:'',nome:'💵 Espécie/Caixa'}].concat(S.contas.map(x=>({id:x.id,nome:'🏦 '+x.nome})));
+  el.innerHTML=linhas.map(l=>{
+    const s=saldoConta(l.id);
+    return `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:12px">${esc(l.nome)}: <strong style="color:${s>=0?'var(--pos)':'var(--neg)'}">${money(s)}</strong></span>`;
+  }).join('');
+}
+/* ── ORÇAMENTO MENSAL POR CATEGORIA ── */
+function setOrcamento(nome,val){
+  if(CR!=='gestor')return;
+  const n=parseFloat(val)||0;
+  if(n>0)S.orcamentos[nome]=n;else delete S.orcamentos[nome];
+  log('Orçamento de '+nome+': '+(n>0?money(n)+'/mês':'removido'));
+  save();renderDashOrcamento();
+}
+function renderOrcamentoList(){
+  const el=document.getElementById('orcamentoList');if(!el)return;
+  const cats=CAT_SAIDA_();
+  if(!cats.length){el.innerHTML='<div class="empty">Cadastre categorias de despesa primeiro.</div>';return;}
+  el.innerHTML=cats.map(n=>`<div class="row">
+    <div class="rlabel">${esc(n)}</div>
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:var(--t3)">R$</span>
+    <input type="number" step="10" min="0" value="${S.orcamentos[n]||''}" placeholder="—" onchange="setOrcamento('${esc(n).replace(/'/g,"\\'")}',this.value)" style="width:110px;font-size:12.5px;padding:5px 8px;text-align:right">
+    <span style="font-size:11px;color:var(--t3)">/mês</span></div>
+  </div>`).join('');
+}
+function renderDashOrcamento(){
+  const el=document.getElementById('dashOrcamento');if(!el)return;
+  const nomes=Object.keys(S.orcamentos||{});
+  if(!isFull()||!nomes.length){el.innerHTML='';return;}
+  const cm=new Date().toISOString().slice(0,7);
+  const linhas=nomes.map(n=>{
+    const meta=S.orcamentos[n];
+    const gasto=S.flux.filter(e=>e.tipo==='saida'&&!e.pessoal&&e.cat===n&&e.d.slice(0,7)===cm).reduce((s,e)=>s+e.val,0);
+    const pct=Math.min(100,meta>0?gasto/meta*100:0);
+    const cor=gasto>meta?'var(--neg)':(pct>=80?'var(--com)':'var(--pos)');
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px">
+        <span style="font-weight:600">${esc(n)}</span>
+        <span style="color:${cor}">${money(gasto)} de ${money(meta)}${gasto>meta?' · <strong>estourou '+money(gasto-meta)+'</strong>':''}</span>
+      </div>
+      <div style="height:7px;background:var(--surface2);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${cor};border-radius:5px;transition:width .3s"></div></div>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="card" style="margin-bottom:1.1rem"><div class="ctitle">Orçamento do mês</div>${linhas}</div>`;
+}
+/* ── FECHAMENTO DE PERÍODO (exclusivo do gestor) ── */
+function fecharMes(){
+  if(CR!=='gestor'){toast('Apenas o gestor pode fechar um mês.','err');return;}
+  const m=v('fech_mes');if(!m){toast('Escolha o mês para fechar.','err');return;}
+  if(S.fechados.includes(m)){toast('Este mês já está fechado.','err');return;}
+  if(!confirm('Fechar '+monthLabel(m)+'? Ninguém poderá lançar, editar ou remover movimentações deste mês até você reabrir.'))return;
+  S.fechados.push(m);S.fechados.sort();
+  log('Gestor fechou o mês '+m+'.');save();renderFechados();
+  toast(monthLabel(m)+' fechado.','ok');
+}
+function reabrirMes(m){
+  if(CR!=='gestor'){toast('Apenas o gestor pode reabrir um mês.','err');return;}
+  if(!confirm('Reabrir '+monthLabel(m)+'? As movimentações dele voltam a poder ser alteradas.'))return;
+  S.fechados=S.fechados.filter(x=>x!==m);
+  log('Gestor reabriu o mês '+m+'.');save();renderFechados();
+  toast(monthLabel(m)+' reaberto.','ok');
+}
+function renderFechados(){
+  const el=document.getElementById('fechadosList');if(!el)return;
+  if(!S.fechados.length){el.innerHTML='<div class="empty" style="padding:.6rem">Nenhum mês fechado.</div>';return;}
+  el.innerHTML=S.fechados.map(m=>`<div class="row"><div class="rlabel">🔒 ${monthLabel(m)}</div><button class="btn btnsm" onclick="reabrirMes('${m}')">Reabrir</button></div>`).join('');
+}
+/* ── BACKUP E RESTAURAÇÃO (exclusivo do gestor) ── */
+function exportBackup(){
+  if(CR!=='gestor'){toast('Apenas o gestor pode exportar o backup.','err');return;}
+  const pacote={sistema:'Auricélia Transportes · Central Financeira',versao:3,exportadoEm:new Date().toISOString(),por:CU,dados:S};
+  const nome='backup_auricelia_'+new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'.json';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(pacote)],{type:'application/json'}));
+  a.download=nome;a.click();
+  log('Gestor exportou backup completo.');save();
+  toast('Backup exportado: '+nome,'ok');
+}
+function importBackup(file){
+  if(CR!=='gestor'){toast('Apenas o gestor pode restaurar um backup.','err');return;}
+  if(!file)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let pacote;
+    try{pacote=JSON.parse(rd.result);}catch(e){toast('Arquivo inválido — não é um backup deste sistema.','err');return;}
+    const dados=pacote&&pacote.dados;
+    if(!dados||!Array.isArray(dados.flux)||!Array.isArray(dados.users)){toast('Arquivo inválido — não é um backup deste sistema.','err');return;}
+    const info=(pacote.exportadoEm?new Date(pacote.exportadoEm).toLocaleString('pt-BR'):'data desconhecida');
+    const resp=prompt('⚠ RESTAURAR BACKUP de '+info+'?\n\nIsto SUBSTITUI todos os dados atuais (deste aparelho e da nuvem) pelos do arquivo. Não pode ser desfeito — se quiser, exporte um backup do estado atual antes.\n\nPara confirmar, digite RESTAURAR (em maiúsculas):');
+    if(resp===null)return;
+    if(resp.trim()!=='RESTAURAR'){toast('Confirmação incorreta — nada foi alterado. Digite exatamente RESTAURAR.','err');return;}
+    S={...JSON.parse(JSON.stringify(DEF)),...dados};
+    log('Gestor restaurou backup de '+info+'.');
+    save();renderAll();buildSidebar();
+    toast('Backup restaurado com sucesso.','ok');
+  };
+  rd.readAsText(file);
+}
 /* limpa SÓ as movimentações (para testes/demonstrações) — mantém usuários, caixas, contas, pessoas, categorias e veículos */
 function limparMovimentacoes(){
   if(CR!=='gestor'){toast('Apenas o gestor pode limpar as movimentações.','err');return;}
@@ -2884,6 +3156,7 @@ function resolverDiv(i,acao){
     renderConcil();return;
   }
   if(acao==='ajustar'){
+    if(bloqueiaMesFechado(item.d))return;
     const dif=item.diff; // banco − sistema
     const absd=Math.abs(dif);
     // registra a diferença como um lançamento de ajuste, para o saldo do sistema bater com o banco
@@ -3075,6 +3348,12 @@ function lancDeConcil(item,caixaId){
   };
 }
 /* valida: itens marcados como sócio precisam ter o sócio escolhido */
+/* remove do lote os itens que caem em mês fechado (com aviso) */
+function filtraMesFechado(sel){
+  const bloq=sel.filter(i=>mesFechado(i.d));
+  if(bloq.length)toast(bloq.length+' transação(ões) de mês fechado foram puladas. Reabra o mês para importá-las.','err');
+  return sel.filter(i=>!mesFechado(i.d));
+}
 function validaSocios(sel){
   const semSocio=sel.filter(i=>i.destino==='socio'&&!i.socioId);
   if(semSocio.length){toast(semSocio.length+' marcada(s) como Pessoal sem pessoa escolhida.','err');return false;}
@@ -3082,8 +3361,9 @@ function validaSocios(sel){
 }
 /* concilia (importa) só os selecionados de UM grupo */
 function conciliarGrupo(tipo){
-  const sel=OFXLIST.filter(i=>i.tipo===tipo&&i.status==='new'&&!i.ignorado&&i.sel);
+  let sel=OFXLIST.filter(i=>i.tipo===tipo&&i.status==='new'&&!i.ignorado&&i.sel);
   if(!sel.length){toast('Marque as '+(tipo==='entrada'?'entradas':'saídas')+' que deseja conciliar.','err');return;}
+  sel=filtraMesFechado(sel);if(!sel.length)return;
   if(!validaSocios(sel))return;
   if(!confirm('Conciliar '+sel.length+' '+(tipo==='entrada'?'entrada(s)':'saída(s)')+' selecionada(s)? Elas serão importadas para o fluxo de caixa.'))return;
   let caixaId=isFull()?(CAIXA_FILTER!=='__all__'&&CAIXA_FILTER!=='__none__'?CAIXA_FILTER:''):CCX;
@@ -3153,8 +3433,9 @@ function ignorarSelecionados(){
 }
 /* importa apenas os itens NOVOS marcados (em lote), com a categoria escolhida */
 function importSelecionados(){
-  const novos=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado&&i.sel);
+  let novos=OFXLIST.filter(i=>i.status==='new'&&!i.ignorado&&i.sel);
   if(!novos.length){toast('Marque ao menos uma transação para conciliar/importar.','err');return;}
+  novos=filtraMesFechado(novos);if(!novos.length)return;
   if(!validaSocios(novos))return;
   if(!confirm('Importar '+novos.length+' transação(ões) selecionada(s) para o fluxo de caixa?'))return;
   let caixaId=isFull()?(CAIXA_FILTER!=='__all__'&&CAIXA_FILTER!=='__none__'?CAIXA_FILTER:''):CCX;
@@ -3391,7 +3672,7 @@ function dadosRelatorio(tipo,de,ate,cx,pess){
         tipo:tipo==='avencer_pagar'?'saida':'entrada',val:c.val,situacao:days(c.venc)<0?'Vencida':'A vencer'}));
   }
   // movimento/recebido/pago: base é o fluxo (inclui conciliação)
-  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate&&noCaixa(e));
+  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate&&noCaixa(e)&&e.tipo!=='transf'); // transferências internas ficam fora dos relatórios
   // filtro de movimentações pessoais: 'sem' (só empresa) | 'com' (tudo) | 'so' (somente pessoais)
   if(pess==='sem')ls=ls.filter(e=>!e.pessoal);
   else if(pess==='so')ls=ls.filter(e=>e.pessoal);
@@ -3503,7 +3784,7 @@ function renderAll(){
   renderPagas();renderRelCaixaSelect();
   if(canSeeSocios())renderSociosConta();
   if(isFull()){renderDRE();renderPlacas();renderRateio();renderConcil();renderComissoes();}
-  if(CR==='gestor'){renderAreaSelect();renderUsers();renderCaixaList();renderContaList();renderCaixaAssignSelect();renderCategorias();const cm=document.getElementById('cu_mods');if(cm&&!cm.children.length)renderModChecks('cu_mods',[]);onRoleChange();}
+  if(CR==='gestor'){renderAreaSelect();renderUsers();renderCaixaList();renderContaList();renderCaixaAssignSelect();renderCategorias();renderFechados();renderOrcamentoList();const cm=document.getElementById('cu_mods');if(cm&&!cm.children.length)renderModChecks('cu_mods',[]);onRoleChange();}
 }
 
 /* ── exposição global (necessário porque o script é type="module") ── */
@@ -3522,6 +3803,7 @@ Object.assign(window,{
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
   setUserCaixa,setUserField,sp,toggleUserMod,toggleUserPage,updateDcfPreview,zerarDadosFinanceiros,limparMovimentacoes,
+  exportBackup,importBackup,fecharMes,reabrirMes,addTransfer,gerarContaComissao,setOrcamento,anexarComprovante,verComprovante,fecharAnexo,removerAnexo,
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
   openEditLanc,closeEditLanc,saveEditLanc,edTipoChange,cobrar,
