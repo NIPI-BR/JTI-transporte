@@ -989,6 +989,7 @@ function cloudListen(){
     FB_SUSPEND=true;
     S={...DEF,...incoming};
     ['flux','receber','pagar','boletos','veiculos','ofx','caixas','contas','socios','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
+    garanteSemente(); // garante a lista-padrão de categorias vindo da nuvem em tempo real
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
     FB_SUSPEND=false;
     // re-render conforme a tela atual
@@ -1098,7 +1099,10 @@ async function cloudFirstPull(){
       const incoming=JSON.parse(snap.data().payload);
       S={...DEF,...incoming};
       ['flux','receber','pagar','boletos','veiculos','ofx','caixas','contas','categorias','socios','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
+      const semMudou=garanteSemente(); // garante a lista-padrão mesmo vindo da nuvem
       try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+      // se o gestor abriu e faltavam categorias-padrão, grava de volta p/ propagar a todos
+      if(semMudou&&CR==='gestor'){FB_LASTSIG=stateSig(S);cloudPush();}
       FB_LASTSIG=stateSig(S);
       if(document.getElementById('app').style.display!=='none')renderAll();
       cloudStatus('Nuvem ✓','ok');
@@ -1157,10 +1161,7 @@ function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.par
   ['flux','receber','pagar','boletos','veiculos','ofx','caixas','contas','categorias','socios','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
   if(!S.users.length)S.users=SEED.map(s=>({...s,t:new Date().toISOString()}));
   if(!S.categorias.length)S.categorias=seedCategorias();
-  else{ // completa categorias-semente que faltam (ex: cartões adicionados numa atualização)
-    const nomes=new Set(S.categorias.map(c=>c.nome.toLowerCase()+'|'+c.tipo));
-    seedCategorias().forEach(sc=>{if(!nomes.has(sc.nome.toLowerCase()+'|'+sc.tipo))S.categorias.push(sc);});
-  }
+  else{ garanteSemente(); }
   if(!S.socios.length)S.socios=[{id:'so_auricelia',nome:'Auricélia',t:new Date().toISOString()}];
   if(!Array.isArray(S.fechados))S.fechados=[];
   if(!S.orcamentos||typeof S.orcamentos!=='object')S.orcamentos={};
@@ -2870,6 +2871,17 @@ function seedCategorias(){
   ];
   const mk=(arr,tipo)=>arr.map(([nome,cor])=>({id:'cat_'+uid(),nome,tipo,cor}));
   return [...mk(entrada,'entrada'),...mk(saida,'saida')];
+}
+/* garante que as categorias-semente existam, sem duplicar nem apagar as do usuário.
+   Chamada em TODO ponto onde os dados entram (local e nuvem) para a lista-padrão
+   nunca ser engolida por um documento antigo salvo na nuvem. */
+function garanteSemente(){
+  if(!Array.isArray(S.categorias))S.categorias=[];
+  if(!S.categorias.length){S.categorias=seedCategorias();return true;}
+  const nomes=new Set(S.categorias.map(c=>c.nome.toLowerCase()+'|'+c.tipo));
+  let mudou=false;
+  seedCategorias().forEach(sc=>{if(!nomes.has(sc.nome.toLowerCase()+'|'+sc.tipo)){S.categorias.push(sc);mudou=true;}});
+  return mudou;
 }
 /* listas dinâmicas a partir de S.categorias */
 function catsByTipo(tipo){return S.categorias.filter(c=>c.tipo===tipo).map(c=>c.nome);}
