@@ -280,36 +280,18 @@ textarea{resize:vertical;min-height:60px}
 
 <!-- LOGIN -->
 <div id="login">
-  <div id="pickerView" class="picker">
+  <div id="loginView" class="picker">
     <div class="picker-logo"><span class="picker-logo-badge">AT</span>Auricélia Transportes</div>
-    <div class="picker-title">Quem está a usar?</div>
-    <div class="profiles" id="profilesGrid"></div>
+    <div class="picker-title" style="margin-bottom:6px">Central Financeira</div>
+    <div style="font-size:13px;color:var(--t3);margin-bottom:22px">Entre com o seu e-mail e senha.</div>
+    <div style="width:100%;max-width:330px;display:flex;flex-direction:column;gap:12px">
+      <input id="lg_email" type="email" autocomplete="username" placeholder="E-mail" style="text-align:center;padding:12px">
+      <input id="lg_senha" type="password" autocomplete="current-password" placeholder="Senha" style="text-align:center;padding:12px" onkeydown="if(event.key==='Enter')fazerLogin()">
+      <button class="btn btnp" id="lg_btn" onclick="fazerLogin()" style="padding:12px;font-size:15px">Entrar</button>
+      <button class="btn btnsm" onclick="esqueciSenha()" style="border:none;color:var(--t3);background:none">Esqueci minha senha</button>
+      <div id="lg_msg" style="font-size:12.5px;text-align:center;min-height:18px"></div>
+    </div>
     <div class="picker-foot"><span style="font-size:12px;color:var(--t3)">Novos acessos são criados pelo gestor.</span><div style="font-size:11px;color:var(--t3);margin-top:8px;text-align:center">Sistema desenvolvido por <strong style="color:var(--pos)">NIPI</strong> · Núcleo Internacional de Políticas Inovadoras</div></div>
-  </div>
-
-  <div id="pinView">
-    <div class="pin-avatar" id="pinAvatar">?</div>
-    <div class="pin-name" id="pinName">—</div>
-    <div class="pin-role" id="pinRole">—</div>
-    <div class="pin-dots" id="pinDots">
-      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
-    </div>
-    <div class="pin-msg" id="pinMsg"></div>
-    <div class="pin-pad">
-      <button class="pin-key" onclick="pinPress('1')">1</button>
-      <button class="pin-key" onclick="pinPress('2')">2</button>
-      <button class="pin-key" onclick="pinPress('3')">3</button>
-      <button class="pin-key" onclick="pinPress('4')">4</button>
-      <button class="pin-key" onclick="pinPress('5')">5</button>
-      <button class="pin-key" onclick="pinPress('6')">6</button>
-      <button class="pin-key" onclick="pinPress('7')">7</button>
-      <button class="pin-key" onclick="pinPress('8')">8</button>
-      <button class="pin-key" onclick="pinPress('9')">9</button>
-      <button class="pin-key fn" onclick="pinClear()">limpar</button>
-      <button class="pin-key" onclick="pinPress('0')">0</button>
-      <button class="pin-key fn" onclick="pinDel()">←</button>
-    </div>
-    <button class="pin-back" onclick="backToPicker()">‹ Trocar de perfil</button>
   </div>
 </div>
 
@@ -371,12 +353,11 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input type="text" id="fx_d" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="fx_desc" placeholder="Descrição"></div>
             <div class="ir">
-              <input id="fx_cat" placeholder="Categoria (escolha ou digite uma nova)" list="fx_cats">
+              <select id="fx_cat"></select>
               <select id="fx_tipo" onchange="onFxTipoChange()"><option value="entrada">Entrada</option><option value="saida">Saída</option></select>
               <input type="number" id="fx_val" placeholder="Valor (R$)" step="0.01" min="0">
             </div>
-            <datalist id="fx_cats"><option>Vendas</option><option>Serviços</option><option>Salários</option><option>Fornecedores</option><option>Impostos</option><option>Aluguel</option><option>Marketing</option><option>Transporte</option><option>Combustível</option><option>Manutenção</option><option>Taxas financeiras / maquininha</option><option>Outros</option></datalist>
-            <datalist id="cc_list"></datalist>
+                        <datalist id="cc_list"></datalist>
             <div class="ir"><select id="fx_conta"></select></div>
             <div id="fx_caixa_wrap"></div>
             <button class="btn btnp" onclick="addFlux()">Lançar</button>
@@ -403,6 +384,7 @@ textarea{resize:vertical;min-height:60px}
             </div>
             <div style="font-size:11px;color:var(--t3);margin-top:6px">Move o dinheiro entre contas sem contar como receita ou despesa — os relatórios da empresa não mudam.</div>
           </div>
+          <div id="fxJanelaInfo"></div>
           <div id="fxTable"><div class="empty">Nenhum lançamento</div></div>
         </div>
       </div>
@@ -422,7 +404,7 @@ textarea{resize:vertical;min-height:60px}
           <div class="mf">
             <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input id="rc_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px"><button class="btn btnsm" onclick="buscarCNPJReceber()">🔎 CNPJ</button></div>
             <div class="ir"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="rc_desc" placeholder="Descrição" oninput="autoCat('rc')"></div>
-            <div class="ir"><input id="rc_cat" list="rc_cat_list" placeholder="Categoria (escolha ou digite uma nova)"><datalist id="rc_cat_list"></datalist><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><select id="rc_cat"></select><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
             <div class="ir"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="rc_recorr" onchange="document.getElementById('rc_nrec').style.display=this.value==='unica'?'none':'block'">
@@ -462,7 +444,7 @@ textarea{resize:vertical;min-height:60px}
               <button class="btn btnsm" onclick="buscarCNPJPagar()">🔎 CNPJ</button>
             </div>
             <div class="ir"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="pg_desc" placeholder="Descrição" oninput="autoCat('pg')"></div>
-            <div class="ir"><input id="pg_cat" list="pg_cat_list" placeholder="Categoria (escolha ou digite uma nova)"><datalist id="pg_cat_list"></datalist><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
+            <div class="ir"><select id="pg_cat"></select><input type="number" id="pg_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
             <div class="ir"><input id="pg_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
             <div class="ir" style="align-items:center">
               <select id="pg_recorr" onchange="document.getElementById('pg_nrec').style.display=this.value==='unica'?'none':'block'">
@@ -748,6 +730,41 @@ textarea{resize:vertical;min-height:60px}
         </div>
       </div>
 
+
+      <!-- CATEGORIAS (plano de contas — gestor) -->
+      <div id="page-categorias" class="page">
+        <div class="ptitle">Categorias</div>
+        <div class="psub">Plano de contas do sistema. As categorias criadas aqui aparecem para todos na hora de lançar e conciliar.</div>
+          <div class="card">
+            <div class="ctitle">Criar categoria</div>
+            <div class="mf">
+              <div class="ir">
+                <input id="cat_nome" placeholder="Nome da categoria">
+                <select id="cat_tipo">
+                  <option value="saida">Despesa (saída)</option>
+                  <option value="entrada">Receita (entrada)</option>
+                </select>
+                <select id="cat_cor">
+                  <option value="var(--peace)">Terracota</option>
+                  <option value="var(--com)">Âmbar</option>
+                  <option value="var(--gr)">Azul</option>
+                  <option value="var(--nipi)">Verde</option>
+                  <option value="var(--ment)">Violeta</option>
+                  <option value="var(--mkt)">Rosa</option>
+                  <option value="var(--t3)">Cinza</option>
+                </select>
+              </div>
+              <button class="btn btnp" onclick="addCategoria()">Criar categoria</button>
+            </div>
+          </div>
+          <div class="card"><div class="ctitle">Categorias de Receita</div><div id="catListEntrada"><div class="empty">Nenhuma</div></div></div>
+          <div class="card"><div class="ctitle">Categorias de Despesa</div><div id="catListSaida"><div class="empty">Nenhuma</div></div></div>
+          <div class="card" style="border-left:3px solid var(--gr)">
+            <div class="ctitle">Orçamento mensal por categoria</div>
+            <p style="font-size:12.5px;color:var(--t2);margin-bottom:8px">Defina um teto de gasto mensal para as categorias de despesa que quiser acompanhar. O dashboard mostra o quanto do orçamento já foi usado no mês. Deixe em branco (ou 0) para não acompanhar.</p>
+            <div id="orcamentoList"><div class="empty">Cadastre categorias de despesa primeiro.</div></div>
+          </div>
+      </div>
       <!-- COMISSÕES DE PARCERIA -->
       <div id="page-comissoes" class="page">
         <div class="ptitle">Comissão por Caixa</div>
@@ -787,7 +804,6 @@ textarea{resize:vertical;min-height:60px}
           <button class="tab on" data-s="cfg1">Usuários e acessos</button>
           <button class="tab" data-s="cfgcx">Caixas</button>
           <button class="tab" data-s="cfgct">Contas Bancárias</button>
-          <button class="tab" data-s="cfgcat">Categorias</button>
           <button class="tab" data-s="cfg2">Zona de risco</button>
         </div>
         <div id="cfg1" class="sp on">
@@ -795,6 +811,7 @@ textarea{resize:vertical;min-height:60px}
             <div class="ctitle">Adicionar usuário</div>
             <div class="mf">
               <div class="ir"><input id="cu_name" placeholder="Nome do usuário"><select id="cu_area"></select></div>
+              <div class="ir"><input id="cu_email" type="email" placeholder="E-mail (o mesmo cadastrado no Firebase)"></div>
               <div class="ir">
                 <select id="cu_role" onchange="onRoleChange()">
                   <option value="membro">Membro — caixa próprio</option>
@@ -802,7 +819,6 @@ textarea{resize:vertical;min-height:60px}
                   <option value="dona">Dona — visão completa</option>
                   <option value="gestor">Gestor administrador — acesso total</option>
                 </select>
-                <input id="cu_pin" placeholder="PIN (4 dígitos)" maxlength="4" inputmode="numeric" pattern="[0-9]*">
               </div>
               <div id="cu_caixawrap" class="ir"><select id="cu_caixa"></select></div>
               <div id="cu_modwrap"><div class="stitle" style="margin-top:.4rem">Painéis que este usuário verá</div><div id="cu_mods" class="modgrid"></div></div>
@@ -849,37 +865,6 @@ textarea{resize:vertical;min-height:60px}
           </div>
           <div class="card"><div class="ctitle">Contas cadastradas</div><div id="contaList"><div class="empty">Nenhuma conta bancária cadastrada</div></div></div>
         </div>
-        <div id="cfgcat" class="sp">
-          <div class="card">
-            <div class="ctitle">Criar categoria</div>
-            <div class="mf">
-              <div class="ir">
-                <input id="cat_nome" placeholder="Nome da categoria">
-                <select id="cat_tipo">
-                  <option value="saida">Despesa (saída)</option>
-                  <option value="entrada">Receita (entrada)</option>
-                </select>
-                <select id="cat_cor">
-                  <option value="var(--peace)">Terracota</option>
-                  <option value="var(--com)">Âmbar</option>
-                  <option value="var(--gr)">Azul</option>
-                  <option value="var(--nipi)">Verde</option>
-                  <option value="var(--ment)">Violeta</option>
-                  <option value="var(--mkt)">Rosa</option>
-                  <option value="var(--t3)">Cinza</option>
-                </select>
-              </div>
-              <button class="btn btnp" onclick="addCategoria()">Criar categoria</button>
-            </div>
-          </div>
-          <div class="card"><div class="ctitle">Categorias de Receita</div><div id="catListEntrada"><div class="empty">Nenhuma</div></div></div>
-          <div class="card"><div class="ctitle">Categorias de Despesa</div><div id="catListSaida"><div class="empty">Nenhuma</div></div></div>
-          <div class="card" style="border-left:3px solid var(--gr)">
-            <div class="ctitle">Orçamento mensal por categoria</div>
-            <p style="font-size:12.5px;color:var(--t2);margin-bottom:8px">Defina um teto de gasto mensal para as categorias de despesa que quiser acompanhar. O dashboard mostra o quanto do orçamento já foi usado no mês. Deixe em branco (ou 0) para não acompanhar.</p>
-            <div id="orcamentoList"><div class="empty">Cadastre categorias de despesa primeiro.</div></div>
-          </div>
-        </div>
         <div id="cfg2" class="sp">
           <div class="card" style="border-left:3px solid var(--com)">
             <div class="ctitle">Fechamento de período</div>
@@ -924,7 +909,7 @@ textarea{resize:vertical;min-height:60px}
       <div><label class="elbl">Data</label><input type="text" id="ed_d" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"></div>
       <div><label class="elbl">Tipo</label><select id="ed_tipo" onchange="edTipoChange()"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
       <div class="efull"><label class="elbl">Descrição</label><input id="ed_desc" placeholder="Descrição"></div>
-      <div><label class="elbl">Categoria</label><input id="ed_cat" list="ed_cats" placeholder="Categoria"><datalist id="ed_cats"></datalist></div>
+      <div><label class="elbl">Categoria</label><select id="ed_cat"></select></div>
       <div><label class="elbl">Valor (R$)</label><input type="number" id="ed_val" step="0.01" min="0"></div>
       <div id="ed_caixa_wrap"><label class="elbl">Caixa</label><select id="ed_caixa"></select></div>
       <div class="efull"><label class="elbl">Placa (opcional)</label><input id="ed_placa" placeholder="Placa vinculada"></div>
@@ -943,7 +928,7 @@ textarea{resize:vertical;min-height:60px}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged }
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1008,7 +993,7 @@ function cloudListen(){
     FB_SUSPEND=false;
     // re-render conforme a tela atual
     if(document.getElementById('app').style.display!=='none'){renderAll();}
-    else{renderProfiles();}
+    else{/* login visível */}
     cloudStatus('Atualizado da nuvem','ok');
   },(err)=>{
     console.warn('Erro no listener da nuvem:',err);
@@ -1018,16 +1003,95 @@ function cloudListen(){
 
 /* puxa uma vez no arranque (caso já exista algo na nuvem) */
 async function cloudInit(){
-  if(!FB_OK){cloudStatus('Somente local','');return;}
-  try{
-    cloudStatus('Autenticando…','sync');
-    await signInAnonymously(FB_AUTH);   // login anônimo exigido pelas regras
-    FB_READY=true;
-  }catch(e){
-    console.warn('Falha no login anônimo do Firebase:',e);
-    cloudStatus('Offline · ative o Login anônimo no Firebase','err');
+  if(!FB_OK){
+    cloudStatus('Sem conexão com o servidor','err');
+    const msg=document.getElementById('lg_msg');
+    if(msg){msg.style.color='var(--dngt)';msg.textContent='Servidor de login indisponível. Verifique a conexão e recarregue a página.';}
+    const btn=document.getElementById('lg_btn');if(btn)btn.disabled=true;
     return;
   }
+  // com login por e-mail, a autenticação acontece quando a pessoa entra.
+  // aqui só observamos o estado: se já há sessão ativa (voltou ao app), retomamos.
+  onAuthStateChanged(FB_AUTH,async(user)=>{
+    if(user){
+      FB_READY=true;
+      cloudStatus('Autenticado','ok');
+      await entrarComUsuario(user);
+    }else{
+      FB_READY=false;
+      // mostra a tela de login
+      document.getElementById('app').style.display='none';
+      document.getElementById('login').style.display='flex';
+    }
+  });
+}
+/* faz login com e-mail e senha (Firebase Authentication) */
+async function fazerLogin(){
+  const email=(document.getElementById('lg_email').value||'').trim();
+  const senha=document.getElementById('lg_senha').value||'';
+  const msg=document.getElementById('lg_msg');const btn=document.getElementById('lg_btn');
+  msg.style.color='var(--dngt)';
+  if(!email||!senha){msg.textContent='Informe e-mail e senha.';return;}
+  if(!FB_OK||!FB_AUTH){msg.textContent='Conexão com o servidor indisponível. Tente novamente.';return;}
+  btn.disabled=true;btn.textContent='Entrando…';msg.style.color='var(--t3)';msg.textContent='Verificando…';
+  try{
+    await signInWithEmailAndPassword(FB_AUTH,email,senha);
+    // onAuthStateChanged assume daqui (chama entrarComUsuario)
+    msg.style.color='var(--pos)';msg.textContent='Bem-vindo!';
+    document.getElementById('lg_senha').value='';
+  }catch(e){
+    msg.style.color='var(--dngt)';
+    const cod=(e&&e.code)||'';
+    if(cod.includes('invalid-credential')||cod.includes('wrong-password')||cod.includes('user-not-found'))
+      msg.textContent='E-mail ou senha incorretos.';
+    else if(cod.includes('too-many-requests'))
+      msg.textContent='Muitas tentativas. Aguarde alguns minutos e tente de novo.';
+    else if(cod.includes('invalid-email'))
+      msg.textContent='E-mail inválido.';
+    else msg.textContent='Não foi possível entrar. Verifique os dados e a conexão.';
+  }finally{btn.disabled=false;btn.textContent='Entrar';}
+}
+/* redefinição de senha por e-mail (o Firebase envia o link) */
+async function esqueciSenha(){
+  const email=(document.getElementById('lg_email').value||'').trim();
+  const msg=document.getElementById('lg_msg');
+  if(!email){msg.style.color='var(--dngt)';msg.textContent='Digite o seu e-mail acima primeiro.';return;}
+  if(!FB_OK||!FB_AUTH){msg.style.color='var(--dngt)';msg.textContent='Servidor indisponível.';return;}
+  try{
+    await sendPasswordResetEmail(FB_AUTH,email);
+    msg.style.color='var(--pos)';msg.textContent='Enviamos um link de redefinição para o seu e-mail.';
+  }catch(e){
+    msg.style.color='var(--dngt)';msg.textContent='Não foi possível enviar. Verifique o e-mail digitado.';
+  }
+}
+/* após autenticar: lê o papel do custom claim (inviolável) e monta a sessão */
+async function entrarComUsuario(user){
+  try{
+    const tok=await user.getIdTokenResult(true); // força refresh p/ pegar claims atualizados
+    const claimRole=tok.claims.role||tok.claims.papel||null; // papel vindo do custom claim
+    // registro complementar do usuário (nome, caixa, páginas, dias) casado por e-mail
+    const email=(user.email||'').toLowerCase();
+    let reg=S.users.find(u=>(u.email||'').toLowerCase()===email);
+    if(!reg){
+      // primeiro acesso deste e-mail: cria um registro base (papel vem do claim; sem claim = membro)
+      reg={user:'u_'+user.uid.slice(0,8),uid:user.uid,email:user.email,name:user.displayName||email.split('@')[0],
+           role:claimRole||'membro',area:'operacional',access:[...ALLMODS],caixaId:'',t:new Date().toISOString()};
+      S.users.push(reg);save();
+    }
+    // o papel SEMPRE vem do claim quando existe (fonte de verdade); registro é só complemento
+    if(claimRole)reg.role=claimRole;
+    reg.uid=user.uid; // garante o vínculo
+    startSession(reg);
+    // primeira sincronização da nuvem
+    cloudFirstPull();
+  }catch(e){
+    console.warn('Erro ao montar sessão:',e);
+    const msg=document.getElementById('lg_msg');
+    if(msg){msg.style.color='var(--dngt)';msg.textContent='Erro ao carregar seu perfil. Contate o gestor.';}
+  }
+}
+async function cloudFirstPull(){
+  if(!FB_OK||!FB_READY)return;
   try{
     const snap=await getDoc(FB_DOC);
     if(snap.exists()&&snap.data().payload){
@@ -1036,10 +1100,9 @@ async function cloudInit(){
       ['flux','receber','pagar','boletos','veiculos','ofx','caixas','contas','categorias','socios','users','mem','hist'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
       try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
       FB_LASTSIG=stateSig(S);
-      renderProfiles();
+      if(document.getElementById('app').style.display!=='none')renderAll();
       cloudStatus('Nuvem ✓','ok');
     }else{
-      // primeira vez: envia o estado local (com os dados-semente) para a nuvem
       await cloudPush();
       FB_LASTSIG=stateSig(S);
     }
@@ -1057,7 +1120,7 @@ async function cloudInit(){
 const KEY='nipihub_fin_v3';
 const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},socios:[],users:[],mem:[],hist:[],fechados:[],orcamentos:{}};
 let S={...DEF};
-let CU='',CUID='',CD='',CR='',CA=[],CPAGES=null,CCX='';  // current user name, id, dept, role, access, custom pages, caixaId
+let CU='',CUID='',CD='',CR='',CA=[],CPAGES=null,CCX='',CDIAS=null;  // current user name, id, dept, role, access, custom pages, caixaId, janela de dias
 let CAIXA_FILTER='__all__';            // filtro de caixa selecionado (telas de visão completa)
 
 /* ── PAPÉIS ──
@@ -1077,7 +1140,7 @@ const ALLMODS=MODS.map(m=>m.id);
 
 /* páginas de cada papel */
 const PAGES_FULL=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes']; // operacional + dona (visão completa + ferramentas avançadas)
-const PAGES_ADMIN=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes','equipa','config']; // gestor admin (tudo + sistema)
+const PAGES_ADMIN=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes','equipa','categorias','config']; // gestor admin (tudo + sistema)
 
 /* áreas */
 const DEPTL={diretoria:'Diretoria',financeiro:'Financeiro',administrativo:'Administrativo',operacional:'Operacional',comercial:'Comercial',caixa:'Caixa'};
@@ -1085,9 +1148,9 @@ const DEPTC={diretoria:'var(--pos)',financeiro:'var(--gr)',administrativo:'var(-
 
 /* SEED inicial */
 const SEED=[
-  {user:'edson',name:'Edson',role:'gestor',area:'diretoria',pin:'1234',access:[...ALLMODS]},
-  {user:'janaina',name:'Janaína',role:'operacional',area:'financeiro',pin:'2345',access:[...ALLMODS]},
-  {user:'auricelia',name:'Auricélia',role:'dona',area:'diretoria',pin:'3456',access:[...ALLMODS]}
+  {user:'edson',name:'Edson',role:'gestor',area:'diretoria',email:'',access:[...ALLMODS]},
+  {user:'janaina',name:'Janaína',role:'operacional',area:'financeiro',email:'',access:[...ALLMODS]},
+  {user:'auricelia',name:'Auricélia',role:'dona',area:'diretoria',email:'',access:[...ALLMODS]}
 ];
 
 function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.parse(d)};}catch(e){}
@@ -1103,7 +1166,7 @@ function load(){try{const d=localStorage.getItem(KEY);if(d)S={...DEF,...JSON.par
   if(!S.orcamentos||typeof S.orcamentos!=='object')S.orcamentos={};
   // Dados de exemplo removidos — sistema sobe vazio para os dados reais.
   // (veículos, caixas e lançamentos são criados pelo usuário no app)
-  S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(!u.pin)u.pin='0000';if(u.caixaId===undefined)u.caixaId='';});
+  S.users.forEach(u=>{if(!Array.isArray(u.access))u.access=[...ALLMODS];if(u.email===undefined)u.email='';if(u.caixaId===undefined)u.caixaId='';});
   if(!S.regrasCat||typeof S.regrasCat!=='object'||Array.isArray(S.regrasCat))S.regrasCat={};
 }
 function save(){
@@ -1133,7 +1196,7 @@ function execBuscaGlobal(q){
   const hitVal=(v)=>String(v).replace('.',',').includes(q)||String(v).includes(q);
   const MAX=6;
   // lançamentos: respeita o escopo (membro só vê os seus)
-  let fl=isFull()?S.flux:S.flux.filter(e=>e.byId===CUID);
+  let fl=aplicaJanela(isFull()?S.flux:S.flux.filter(e=>e.byId===CUID));
   const rFlux=fl.filter(e=>hit(e.desc)||hit(e.cat)||hit(e.by)||hitVal(e.val)).slice(0,MAX);
   const rRec=isFull()?S.receber.filter(c=>hit(c.cli)||hit(c.desc)||hit(c.cat)||hitVal(c.val)).slice(0,MAX):[];
   const rPag=isFull()?S.pagar.filter(c=>hit(c.forn)||hit(c.desc)||hit(c.cat)||hitVal(c.val)).slice(0,MAX):[];
@@ -1249,64 +1312,12 @@ function canSeeSocios(){
 }
 
 /* ── LOGIN: seletor de perfis ── */
-function renderProfiles(){
-  const g=document.getElementById('profilesGrid');if(!g)return;
-  g.innerHTML=S.users.map((u,i)=>{
-    const adm=u.role==='gestor';
-    const crown=adm?'★':(u.role==='dona'?'♛':(u.role==='operacional'?'◆':''));
-    const crownColor=adm?'var(--text)':(u.role==='dona'?'var(--com)':'var(--peace)');
-    const bg=adm?'var(--text)':(DEPTC[u.area]||'var(--t3)');
-    return`<div class="profile-wrap"><button class="profile" onclick="askPin(${i})"><div class="pavatar" style="background:${bg}">${esc(initials(u.name))}${crown?`<span class="pcrown" style="background:${crownColor}">${crown}</span>`:''}</div><div class="pname">${esc(u.name)}</div><div class="pdept">${esc(ROLE_LABEL[u.role]||'Membro')}</div></button></div>`;
-  }).join('')||'<div class="empty">Nenhum perfil configurado.</div>';
-}
-
-/* ── PIN ── */
-let PIN_USER=null, PIN_BUF='';
-function askPin(i){
-  const u=S.users[i];if(!u)return;
-  PIN_USER=u;PIN_BUF='';
-  document.getElementById('pickerView').style.display='none';
-  const pv=document.getElementById('pinView');pv.style.display='flex';
-  const adm=u.role==='gestor';
-  document.getElementById('pinAvatar').textContent=initials(u.name);
-  document.getElementById('pinAvatar').style.background=adm?'var(--text)':(DEPTC[u.area]||'var(--t3)');
-  document.getElementById('pinName').textContent=u.name;
-  document.getElementById('pinRole').textContent=ROLE_LABEL[u.role]||'Membro';
-  document.getElementById('pinMsg').textContent='';
-  renderPinDots();
-}
-function renderPinDots(){
-  document.querySelectorAll('#pinDots .pin-dot').forEach((d,i)=>{
-    d.classList.toggle('filled',i<PIN_BUF.length);d.classList.remove('err');
-  });
-}
-function pinPress(n){
-  if(PIN_BUF.length>=4)return;
-  PIN_BUF+=n;renderPinDots();
-  if(PIN_BUF.length===4)setTimeout(checkPin,150);
-}
-function pinDel(){PIN_BUF=PIN_BUF.slice(0,-1);renderPinDots();}
-function pinClear(){PIN_BUF='';renderPinDots();document.getElementById('pinMsg').textContent='';}
-function checkPin(){
-  if(!PIN_USER)return;
-  if(PIN_BUF===(PIN_USER.pin||'0000')){startSession(PIN_USER);}
-  else{
-    document.getElementById('pinMsg').textContent='PIN incorreto. Tente novamente.';
-    document.querySelectorAll('#pinDots .pin-dot').forEach(d=>d.classList.add('err'));
-    setTimeout(()=>{PIN_BUF='';renderPinDots();},400);
-  }
-}
-function backToPicker(){
-  PIN_USER=null;PIN_BUF='';
-  document.getElementById('pinView').style.display='none';
-  document.getElementById('pickerView').style.display='flex';
-}
-document.addEventListener('keydown',e=>{
-  if(document.getElementById('pinView').style.display!=='flex')return;
-  if(e.key>='0'&&e.key<='9')pinPress(e.key);
-  else if(e.key==='Backspace')pinDel();
-  else if(e.key==='Escape')backToPicker();
-});
+/* ── Login por e-mail/senha substituiu a tela de perfis + PIN.
+   Stubs abaixo mantêm compatibilidade com chamadas antigas sem efeito. ── */
+function renderProfiles(){/* não há mais grade de perfis */}
+function askPin(){/* obsoleto */}
+function backToPicker(){/* obsoleto */}
+function pinPress(){}function pinDel(){}function pinClear(){}
 
 /* ── permissões de páginas ── */
 function allowedPages(){
@@ -1321,7 +1332,7 @@ function allowedPages(){
 }
 
 function startSession(u){
-  CU=u.name;CUID=u.user;CD=u.area||'diretoria';CR=u.role||'membro';CA=Array.isArray(u.access)?u.access:[...ALLMODS];CPAGES=Array.isArray(u.pages)?u.pages:null;CCX=u.caixaId||'';
+  CU=u.name;CUID=u.uid||u.user;CD=u.area||'diretoria';CR=u.role||'membro';CA=Array.isArray(u.access)?u.access:[...ALLMODS];CPAGES=Array.isArray(u.pages)?u.pages:null;CCX=u.caixaId||'';CDIAS=(u.dias===undefined||u.dias===null||u.dias==='')?null:parseInt(u.dias)||0;
   CAIXA_FILTER='__all__';
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
@@ -1330,14 +1341,20 @@ function startSession(u){
   document.getElementById('tdept').textContent='· '+(ROLE_LABEL[CR]||'Membro');
   document.getElementById('ddate').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const dd=document.getElementById('fx_d');if(dd&&!dd.value)dd.value=hojeBR();
-  // membro vê dashboard do próprio caixa
   document.getElementById('dashTitle').textContent=isFull()?'Dashboard':'Meu Caixa';
   buildSidebar();
-  if(isFull())gerarRecorrentesAuto(); // gera contas recorrentes vencidas automaticamente
+  if(isFull())gerarRecorrentesAuto();
   const first=allowedPages()[0]||'fluxo';
   sp(first);renderAll();
 }
-function logout(){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';CU='';CUID='';CD='';CR='';CA=[];CCX='';backToPicker();renderProfiles();}
+async function logout(){
+  try{if(FB_OK&&FB_AUTH)await signOut(FB_AUTH);}catch(e){}
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='flex';
+  CU='';CUID='';CD='';CR='';CA=[];CCX='';CPAGES=null;CDIAS=null;
+  const s=document.getElementById('lg_senha');if(s)s.value='';
+  const m=document.getElementById('lg_msg');if(m)m.textContent='';
+}
 
 /* ── SIDEBAR ── */
 const NAV=[
@@ -1355,6 +1372,7 @@ const NAV=[
   {id:'relatorios',l:'Relatórios',dot:'var(--text)',sec:''},
   {id:'socios',l:'Movimentações Pessoais',dot:'var(--mkt)',sec:''},
   {id:'equipa',l:'Equipa',ico:'◷',sec:'Sistema'},
+  {id:'categorias',l:'Categorias',ico:'🏷',sec:'Gestor'},
   {id:'config',l:'Configurações',ico:'⚙',sec:'Gestor'},
 ];
 function buildSidebar(){
@@ -1412,7 +1430,7 @@ function addFlux(){
   if(!desc){toast('Informe a descrição.','err');return;}
   if(!val||val<=0||isNaN(val)){toast('Informe um valor válido.','err');return;}
   if(bloqueiaMesFechado(d))return;
-  const cat=garanteCategoria(v('fx_cat'),tipo); // nova categoria é cadastrada automaticamente
+  const cat=v('fx_cat'); // categoria escolhida da lista do gestor
   // caixa: membro usa o seu; visão completa usa o filtro ativo (ou o select)
   let caixaId=CCX;
   if(isFull()){const sel=document.getElementById('fx_caixa_sel');caixaId=sel?sel.value:(CAIXA_FILTER!=='__all__'?CAIXA_FILTER:'');}
@@ -1449,8 +1467,8 @@ function openEditLanc(id){
   document.getElementById('ed_desc').value=e.desc||'';
   document.getElementById('ed_val').value=e.val;
   document.getElementById('ed_placa').value=e.placa||'';
-  edTipoChange(); // popula datalist de categorias conforme tipo
-  document.getElementById('ed_cat').value=e.cat||'';
+  const edc=document.getElementById('ed_cat');edc.dataset.cur=e.cat||'';
+  edTipoChange(); // popula o select de categorias conforme o tipo (usa dataset.cur)
   // caixa (só visão completa escolhe)
   const cxWrap=document.getElementById('ed_caixa_wrap');
   if(isFull()){
@@ -1463,8 +1481,14 @@ function openEditLanc(id){
 }
 function edTipoChange(){
   const tipo=document.getElementById('ed_tipo').value;
-  const dl=document.getElementById('ed_cats');
-  if(dl)dl.innerHTML=(tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_()).map(c=>`<option>${esc(c)}</option>`).join('');
+  const sel=document.getElementById('ed_cat');
+  if(sel){
+    const lista=(tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_());
+    const atual=sel.dataset.cur||'';
+    const extra=atual&&!lista.includes(atual)?`<option value="${esc(atual)}">${esc(atual)} (antiga)</option>`:'';
+    sel.innerHTML='<option value="">Categoria…</option>'+extra+lista.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    sel.value=atual;
+  }
 }
 function closeEditLanc(){EDIT_ID=null;document.getElementById('editModal').classList.remove('open');}
 function saveEditLanc(){
@@ -1483,14 +1507,32 @@ function saveEditLanc(){
 /* lista de caixas cadastrados (para filtros de visão completa) */
 function caixaUsers(){return S.caixas;}
 /* escopo: membro vê o próprio caixa (caixaId atribuído, ou seus lançamentos); visão completa vê todos ou filtra por caixa */
+/* janela de visão: quantos dias para trás este usuário enxerga (0 = sem limite).
+   padrão: membros (caixa) veem 7 dias; visão completa sem limite; gestor sempre tudo. */
+function limiteDias(){
+  if(CR==='gestor')return 0;
+  if(CDIAS===null)return CR==='membro'?7:0; // padrão
+  return CDIAS>0?CDIAS:0;
+}
+function dataCorte(){
+  const n=limiteDias();if(!n)return null;
+  const d=new Date();d.setDate(d.getDate()-(n-1)); // inclui hoje
+  return d.toISOString().slice(0,10);
+}
+function aplicaJanela(lista){
+  const corte=dataCorte();
+  return corte?lista.filter(e=>e.d>=corte):lista;
+}
 function scopedFlux(){
   if(!isFull()){
-    if(CCX)return S.flux.filter(e=>e.caixaId===CCX||e.byId===CUID);
-    return S.flux.filter(e=>e.byId===CUID);
+    if(CCX)return aplicaJanela(S.flux.filter(e=>e.caixaId===CCX||e.byId===CUID));
+    return aplicaJanela(S.flux.filter(e=>e.byId===CUID));
   }
-  if(CAIXA_FILTER==='__none__')return S.flux.filter(e=>!e.caixaId);
-  if(CAIXA_FILTER&&CAIXA_FILTER!=='__all__')return S.flux.filter(e=>e.caixaId===CAIXA_FILTER);
-  return S.flux;
+  let base;
+  if(CAIXA_FILTER==='__none__')base=S.flux.filter(e=>!e.caixaId);
+  else if(CAIXA_FILTER&&CAIXA_FILTER!=='__all__')base=S.flux.filter(e=>e.caixaId===CAIXA_FILTER);
+  else base=S.flux;
+  return aplicaJanela(base);
 }
 function renderCaixaFilter(containerId){
   const el=document.getElementById(containerId);if(!el)return;
@@ -1517,6 +1559,8 @@ function renderFluxo(){
   renderContaSelect();
   renderTransferCard();
   onFxTipoChange();
+  const ji=document.getElementById('fxJanelaInfo');
+  if(ji){const n=limiteDias();ji.innerHTML=n?`<div style="font-size:11.5px;color:var(--t3);margin:2px 0 8px">👁 Mostrando os últimos ${n} dias de movimentações.</div>`:'';}
   // escopo do fluxo
   renderCaixaFilter('fxCaixaFilter');
   // subtítulo conforme papel
@@ -1581,7 +1625,7 @@ function renderOnboarding(){
     {ok:temCaixa,ic:'🏪',t:'Cadastre seus caixas',s:'Um para cada ponto ou agência. Habilita filtros e relatórios por caixa.',btn:'Criar caixa',act:"sp('config')"},
     {ok:temConta,ic:'🏦',t:'Cadastre as contas bancárias',s:'Os bancos da empresa, para saber de qual conta entrou ou saiu cada valor.',btn:'Cadastrar conta',act:"sp('config')"},
     {ok:temLanc,ic:'📊',t:'Faça o primeiro lançamento',s:'Registre uma entrada ou saída no Fluxo de Caixa para o sistema ganhar vida.',btn:'Ir para o Fluxo',act:"sp('fluxo')"},
-    {ok:temEquipe,ic:'👥',t:'Convide sua equipe',s:'Crie acessos para quem vai operar os caixas, cada um com seu PIN.',btn:'Gerir equipe',act:"sp('config')",opcional:true}
+    {ok:temEquipe,ic:'👥',t:'Convide sua equipe',s:'Crie acessos para quem vai operar os caixas, cada um com seu e-mail e senha.',btn:'Gerir equipe',act:"sp('config')",opcional:true}
   ];
   const feitos=passos.filter(p=>p.ok&&!p.opcional).length;
   const totalObrig=passos.filter(p=>!p.opcional).length;
@@ -1607,8 +1651,10 @@ function renderOnboarding(){
 function renderDash(){
   const scope=document.getElementById('dashScope');
   if(scope){
-    if(isFull()){renderCaixaFilter('dashScope');}
-    else{scope.innerHTML=`<div style="margin-bottom:.9rem;font-size:12px;color:var(--t3)">Resumo do seu caixa pessoal · <strong style="color:var(--t2)">${esc(CU)}</strong></div>`;}
+    const nJ=limiteDias();
+    const chip=nJ?` · 👁 últimos ${nJ} dias`:'';
+    if(isFull()){renderCaixaFilter('dashScope');if(nJ){const ex=document.createElement('div');ex.style.cssText='margin:-4px 0 .8rem;font-size:11.5px;color:var(--t3)';ex.textContent='👁 Mostrando os últimos '+nJ+' dias de movimentações.';scope.appendChild(ex);}}
+    else{scope.innerHTML=`<div style="margin-bottom:.9rem;font-size:12px;color:var(--t3)">Resumo do seu caixa pessoal · <strong style="color:var(--t2)">${esc(CU)}</strong>${chip}</div>`;}
   }
   const dd=document.getElementById('ddate');
   if(dd)dd.textContent='Visão rápida da situação financeira · '+toBR(new Date().toISOString().slice(0,10));
@@ -1934,7 +1980,7 @@ function addReceber(){
   if(!cli){toast('Informe o cliente.','err');return;}
   if(!venc){toast('Informe o vencimento.','err');return;}
   if(!val||val<=0){toast('Informe um valor válido.','err');return;}
-  const cat=garanteCategoria(v('rc_cat'),'entrada'); // nova categoria é cadastrada automaticamente
+  const cat=v('rc_cat'); // categoria escolhida da lista do gestor
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
   const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
@@ -1967,7 +2013,7 @@ function cobrar(id){
 }
 function renderReceber(){
   const mg=document.getElementById('rc_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
-  const dl=document.getElementById('rc_cat_list');if(dl)dl.innerHTML=CAT_ENTRADA_().map(x=>`<option value="${esc(x)}">`).join('');
+  const sel=document.getElementById('rc_cat');if(sel){const cur=sel.value;sel.innerHTML='<option value="">Categoria…</option>'+CAT_ENTRADA_().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');sel.value=cur||'';}
   renderCCList();
   const abertos=S.receber.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
@@ -1995,7 +2041,7 @@ function addPagar(){
   if(!forn){toast('Informe o fornecedor.','err');return;}
   if(!venc){toast('Informe o vencimento.','err');return;}
   if(!val||val<=0){toast('Informe um valor válido.','err');return;}
-  const cat=garanteCategoria(v('pg_cat'),'saida'); // nova categoria é cadastrada automaticamente
+  const cat=v('pg_cat'); // categoria escolhida da lista do gestor
   const n=recorr==='unica'?1:nrec;const grupo=n>1?uid():null;
   const autoRecorr=recorr!=='unica'?(grupo||uid()):null;
   for(let i=0;i<n;i++){
@@ -2017,7 +2063,7 @@ function pagarConta(id){
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;removerComDesfazer('pagar',id,renderPagar,'Conta a pagar de '+(c.forn||'—'));}
 function renderPagar(){
   const mg=document.getElementById('pg_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
-  const dl=document.getElementById('pg_cat_list');if(dl)dl.innerHTML=CAT_SAIDA_().map(x=>`<option value="${esc(x)}">`).join('');
+  const sel=document.getElementById('pg_cat');if(sel){const cur=sel.value;sel.innerHTML='<option value="">Categoria…</option>'+CAT_SAIDA_().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');sel.value=cur||'';}
   renderCCList();
   const abertos=S.pagar.filter(c=>c.status==='aberto');
   const tot=abertos.reduce((s,c)=>s+c.val,0);
@@ -2268,9 +2314,11 @@ function renderSocioSelect(){
 }
 /* preenche o datalist de categorias do fluxo conforme o tipo escolhido */
 function renderFxCats(){
-  const dl=document.getElementById('fx_cats');if(!dl)return;
+  const sel=document.getElementById('fx_cat');if(!sel)return;
   const tipo=v('fx_tipo')||'entrada';
-  dl.innerHTML=(tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_()).map(n=>`<option value="${esc(n)}">`).join('');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Categoria…</option>'+(tipo==='entrada'?CAT_ENTRADA_():CAT_SAIDA_()).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.value=cur||'';
 }
 /* mostra/oculta a linha de retirada conforme o tipo (saída=retirada, entrada=devolução) */
 function onFxTipoChange(){
@@ -2422,20 +2470,22 @@ function addUser(){
   if(CR!=='gestor')return;
   const name=v('cu_name').trim();if(!name){toast('Indique o nome do usuário.','err');return;}
   const role=v('cu_role')||'membro';const area=v('cu_area')||'caixa';
-  const pin=v('cu_pin').trim();
-  if(!/^[0-9]{4}$/.test(pin)){toast('Defina um PIN de 4 dígitos para o usuário.','err');return;}
+  const email=(v('cu_email')||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Informe um e-mail válido (o mesmo cadastrado no Firebase).','err');return;}
+  if(S.users.find(u=>(u.email||'').toLowerCase()===email)){toast('Já existe um usuário com este e-mail.','err');return;}
   let access;
   if(role==='membro'){
     access=[...document.querySelectorAll('#cu_mods input:checked')].map(c=>c.value);
     if(!access.length){toast('Selecione pelo menos um painel para o membro.','err');return;}
   }else{access=[...ALLMODS];}
   const caixaId=role==='membro'?(v('cu_caixa')||''):'';
-  const rec={user:name.toLowerCase().replace(/\s+/g,'_')+'_'+uid(),name,role,area,pin,access,caixaId,t:new Date().toISOString()};
+  const rec={user:name.toLowerCase().replace(/\s+/g,'_')+'_'+uid(),email,name,role,area,access,caixaId,t:new Date().toISOString()};
   S.users.push(rec);
   if(!S.mem.find(m=>m.n===name))S.mem.push({n:name,d:area,t:rec.t});
-  log('Gestor criou usuário: '+name+' ('+ROLE_LABEL[role]+')'+(caixaId?' · '+caixaNome(caixaId):''));save();
-  clr('cu_name','cu_pin');renderModChecks('cu_mods',[]);renderCaixaAssignSelect('');renderUsers();renderEquipa();renderProfiles();
-  alert('Usuário "'+name+'" criado com PIN '+pin+'.');
+  log('Gestor criou usuário: '+name+' ('+ROLE_LABEL[role]+') · '+email+(caixaId?' · '+caixaNome(caixaId):''));save();
+  clr('cu_name','cu_email');renderModChecks('cu_mods',[]);renderCaixaAssignSelect('');renderUsers();renderEquipa();
+  const precisaClaim=(role==='gestor'||role==='operacional'||role==='dona');
+  alert('Usuário "'+name+'" criado.\n\nIMPORTANTE:\n1) Cadastre este e-mail em Authentication no Firebase (com uma senha).'+(precisaClaim?'\n2) Rode o script de papéis para dar o papel "'+role+'" a este e-mail (custom claim).':'')+'\n\nSem esses passos, a pessoa não consegue entrar.');
 }
 function setUserCaixa(uid_,caixaId){const u=S.users.find(x=>x.user===uid_);if(!u)return;u.caixaId=caixaId;log('Gestor atribuiu caixa a '+u.name+': '+(caixaId?caixaNome(caixaId):'nenhum'));save();renderCaixaList();}
 function setUserField(uid_,field,val){
@@ -2444,9 +2494,17 @@ function setUserField(uid_,field,val){
   else if(field==='name')u.name=val.trim();
   else u[field]=val;
   if(field==='role'){u.access=val==='membro'?(u.access&&u.access.length?u.access:[...ALLMODS]):[...ALLMODS];}
-  log('Gestor editou usuário: '+u.name);save();renderUsers();renderEquipa();renderProfiles();
+  log('Gestor editou usuário: '+u.name);save();renderUsers();renderEquipa();
 }
 function toggleUserMod(uid_,mod,on){const u=S.users.find(x=>x.user===uid_);if(!u)return;u.access=u.access||[];if(on){if(!u.access.includes(mod))u.access.push(mod);}else{u.access=u.access.filter(m=>m!==mod);}save();}
+/* gestor define a janela de dias visíveis de um usuário (vazio = padrão do papel; 0 = sem limite) */
+function setUserDias(uid_,val){
+  const u=S.users.find(x=>x.user===uid_);if(!u)return;
+  const t=(val||'').toString().trim();
+  u.dias=t===''?'':Math.max(0,parseInt(t)||0);
+  log('Ajustou janela de '+u.name+': '+(t===''?'padrão':(u.dias===0?'sem limite':u.dias+' dias')));
+  save();
+}
 /* gestor escolhe quais páginas um usuário operacional/dona vê */
 function toggleUserPage(uid_,pid,on){
   const u=S.users.find(x=>x.user===uid_);if(!u)return;
@@ -2465,7 +2523,7 @@ function removeUser(uid_){
   const u=S.users.find(x=>x.user===uid_);if(!u)return;
   if(u.role==='gestor'&&S.users.filter(x=>x.role==='gestor').length<=1){toast('Não pode remover o único gestor administrador.','err');return;}
   if(!confirm('Remover o usuário "'+u.name+'"?'))return;
-  S.users=S.users.filter(x=>x.user!==uid_);log('Gestor removeu usuário: '+u.name);save();renderUsers();renderEquipa();renderProfiles();
+  S.users=S.users.filter(x=>x.user!==uid_);log('Gestor removeu usuário: '+u.name);save();renderUsers();renderEquipa();
 }
 function renderUsers(){
   const el=document.getElementById('userlist');if(!el)return;
@@ -2488,8 +2546,8 @@ function renderUsers(){
       <div class="uhead">
         <input value="${esc(u.name)}" onchange="setUserField('${u.user}','name',this.value)" style="max-width:180px;font-weight:600">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="pin-badge" title="PIN de acesso">PIN ${esc(u.pin||'----')}</span>
-          <input value="${esc(u.pin||'')}" maxlength="4" inputmode="numeric" placeholder="PIN" onchange="setUserField('${u.user}','pin',this.value)" style="width:64px;font-size:12px;padding:4px 8px;text-align:center;letter-spacing:.1em">
+          <span class="pin-badge" title="E-mail de acesso (Firebase)">✉ ${esc(u.email||'sem e-mail')}</span>
+          <input value="${esc(u.email||'')}" type="email" placeholder="e-mail" onchange="setUserField('${u.user}','email',this.value)" style="width:180px;font-size:12px;padding:4px 8px">
           <select onchange="setUserField('${u.user}','area',this.value)" style="width:auto;font-size:12px;padding:4px 8px">${Object.keys(DEPTL).map(k=>`<option value="${k}" ${u.area===k?'selected':''}>${DEPTL[k]}</option>`).join('')}</select>
           <select onchange="setUserField('${u.user}','role',this.value)" style="width:auto;font-size:12px;padding:4px 8px">
             <option value="membro" ${u.role==='membro'?'selected':''}>Membro</option>
@@ -2500,6 +2558,7 @@ function renderUsers(){
           <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="removeUser('${u.user}')">Remover</button>
         </div>
       </div>
+      ${u.role!=='gestor'?`<div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--t2);font-weight:600">Vê os últimos</span><input type="number" min="0" step="1" value="${u.dias===undefined||u.dias===null||u.dias===''?'':u.dias}" placeholder="${u.role==='membro'?'7':'sem limite'}" onchange="setUserDias('${u.user}',this.value)" style="width:76px;font-size:12px;padding:4px 8px;text-align:center"><span style="font-size:11px;color:var(--t2);font-weight:600">dias</span><span style="font-size:10.5px;color:var(--t3)">(vazio = ${u.role==='membro'?'padrão 7 dias':'sem limite'} · 0 = sem limite)</span></div>`:''}
       <div class="stitle" style="margin:0 0 5px">${isMembro?'Painéis visíveis para este membro':(isFullRole?'Páginas visíveis para este usuário':'Permissões')}</div>
       <div class="modgrid">${mods}</div>
       ${isMembro?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--t2);font-weight:600">Caixa atribuído:</span><select onchange="setUserCaixa('${u.user}',this.value)" style="width:auto;font-size:12px;padding:4px 8px"><option value="">Sem caixa</option>${S.caixas.map(c=>`<option value="${c.id}" ${u.caixaId===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div>`:''}
@@ -2764,24 +2823,50 @@ const CD_CATS=['Combustível','Taxa de Pedágio','Taxa de Embarque','Frete de Ô
 /* categorias para selects de despesa (saída) e receita (entrada) */
 /* categorias-semente (nome, tipo, cor) — viram editáveis em S.categorias */
 function seedCategorias(){
-  const pal={verde:'var(--pos)',azul:'var(--gr)',violeta:'var(--ment)',terra:'var(--peace)',rosa:'var(--mkt)',ambar:'var(--com)'};
-  const saida=[
-    ['Combustível','var(--peace)'],['Manutenção de Veículos','var(--com)'],['Taxa de Pedágio','var(--ment)'],
-    ['Salários, Encargos e Benefícios','var(--gr)'],['Serviço (Pessoa Física)','var(--peace)'],['Aluguel e Condomínio','var(--mkt)'],['Energia Elétrica','var(--com)'],
-    ['Água','var(--gr)'],['Telefone e Internet','var(--ment)'],['Sistemas (softwares)','var(--gr)'],
-    ['Serviços Contratados','var(--peace)'],['Material de Escritório','var(--t3)'],['Fornecedores','var(--peace)'],
-    ['Impostos sobre Receita','var(--mkt)'],['Taxas e Contribuições','var(--com)'],['Taxas Bancárias','var(--com)'],
-    ['Taxas financeiras / maquininha','var(--com)'],['PIX Pago','var(--peace)'],['Pagamento Operacional','var(--peace)'],['Multas','var(--peace)'],['Outras Despesas','var(--t3)'],
-    /* plano de contas Joel Transportes (planilha 2025-10-22) — grafia preservada p/ bater com o histórico */
-    ['Custos produto vendido','var(--peace)'],['Custo serviço prestado','var(--peace)'],['SISTEMAS','var(--peace)'],['Luz','var(--com)'],['Despesas financeiras','var(--com)'],['Tarifa bancária','var(--com)'],['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--com)'],['FATURA CARTAO DE CREDITO','var(--com)'],['TAXAS DE EMBARQUE','var(--com)'],['DESPESAS COMBUSTIVEL','var(--com)'],['FRETE DE ONIBUS','var(--com)'],['TAXA PEDAGIO','var(--com)'],['MANUTENÇÃO','var(--com)'],['Compra de ativo fixo','var(--ment)'],['IMOBILIARIO','var(--ment)'],['Pagamento de empréstimo','var(--mkt)'],['Retirada de capital','var(--mkt)'],['EMPRESTIMO BANCARIO','var(--mkt)'],['FINANCIAMENTO','var(--mkt)']
-  ];
+  /* Lista-padrão definitiva (grafia preservada conforme o cliente).
+     O gestor adiciona/remove pela aba Categorias quando precisar. */
   const entrada=[
-    ['Receita com Frete','var(--nipi)'],['Frete de Mercadoria','var(--nipi)'],['Vendas','var(--nipi)'],['Serviços','var(--gr)'],
-    ['Cartão de Crédito','var(--gr)'],['Cartão de Débito','var(--gr)'],
-    ['Rede / Mastercard','var(--ment)'],['Cielo','var(--ment)'],['Getnet','var(--ment)'],['Stone','var(--ment)'],['PIX Recebido','var(--nipi)'],
-    ['Recebimentos','var(--nipi)'],['Adiantamento de Cliente','var(--gr)'],['Rendimentos','var(--ment)'],['Outras Receitas','var(--t3)'],
-    /* plano de contas Joel Transportes (planilha 2025-10-22) */
-    ['Receita com vendas','var(--nipi)'],['Receita com serviços','var(--nipi)'],['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--nipi)'],['RECIBOMENTO DE DINHEIRO','var(--nipi)'],['DEMONSTRATIVO','var(--nipi)'],['RECEBIMENTO DE PIX','var(--nipi)'],['Venda de ativo fixo','var(--ment)'],['Obtenção de empréstimo','var(--mkt)'],['Aporte de capital','var(--mkt)']
+    ['Receita com vendas','var(--nipi)'],
+    ['Receita com serviços','var(--nipi)'],
+    ['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--gr)'],
+    ['RECIBOMENTO DE DINHEIRO','var(--nipi)'],
+    ['DEMONSTRATIVO','var(--nipi)'],
+    ['RECEBIMENTO DE PIX','var(--nipi)'],
+    ['Venda de ativo fixo','var(--ment)'],
+    ['Obtenção de empréstimo','var(--mkt)'],
+    ['Aporte de capital','var(--mkt)']
+  ];
+  const saida=[
+    ['Custos produto vendido','var(--peace)'],
+    ['Impostos sobre receita','var(--mkt)'],
+    ['Custo serviço prestado','var(--peace)'],
+    ['SISTEMAS','var(--gr)'],
+    ['Salários, encargos e benefícios','var(--gr)'],
+    ['Luz','var(--com)'],
+    ['Aluguel e condomínio','var(--mkt)'],
+    ['Serviços contratados','var(--peace)'],
+    ['Material de escritório','var(--t3)'],
+    ['Despesas financeiras','var(--com)'],
+    ['Taxas e contribuições','var(--com)'],
+    ['Tarifa bancária','var(--com)'],
+    ['Telefone e Internet','var(--ment)'],
+    ['Água','var(--gr)'],
+    ['Outras despesas','var(--t3)'],
+    ['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--gr)'],
+    ['FATURA CARTAO DE CREDITO','var(--com)'],
+    ['TAXAS DE EMBARQUE','var(--com)'],
+    ['DESPESAS COMBUSTIVEL','var(--peace)'],
+    ['PAGAMENTO OPERACIONAL','var(--peace)'],
+    ['MULTAS','var(--peace)'],
+    ['FRETE DE ONIBUS','var(--peace)'],
+    ['TAXA PEDAGIO','var(--ment)'],
+    ['MANUTENÇÃO','var(--com)'],
+    ['Compra de ativo fixo','var(--ment)'],
+    ['IMOBILIARIO','var(--ment)'],
+    ['Pagamento de empréstimo','var(--mkt)'],
+    ['Retirada de capital','var(--mkt)'],
+    ['EMPRESTIMO BANCARIO','var(--mkt)'],
+    ['FINANCIAMENTO','var(--mkt)']
   ];
   const mk=(arr,tipo)=>arr.map(([nome,cor])=>({id:'cat_'+uid(),nome,tipo,cor}));
   return [...mk(entrada,'entrada'),...mk(saida,'saida')];
@@ -3459,7 +3544,7 @@ function movimentacoesPeriodo(per){
   // Baseia-se no FLUXO DE CAIXA, que já contém tudo: conciliação bancária,
   // recebimentos/pagamentos de contas, boletos e lançamentos manuais.
   // Assim nada duplica e a conciliação aparece no relatório.
-  let base=S.flux;
+  let base=aplicaJanela(S.flux);
   // respeita o filtro de caixa da visão completa, se houver
   if(isFull()&&typeof CAIXA_FILTER!=='undefined'){
     if(CAIXA_FILTER==='__none__')base=base.filter(e=>!e.caixaId);
@@ -3676,7 +3761,7 @@ function dadosRelatorio(tipo,de,ate,cx,pess){
         tipo:tipo==='avencer_pagar'?'saida':'entrada',val:c.val,situacao:days(c.venc)<0?'Vencida':'A vencer'}));
   }
   // movimento/recebido/pago: base é o fluxo (inclui conciliação)
-  let ls=S.flux.filter(e=>e.d>=de&&e.d<=ate&&noCaixa(e)&&e.tipo!=='transf'); // transferências internas ficam fora dos relatórios
+  let ls=aplicaJanela(S.flux).filter(e=>e.d>=de&&e.d<=ate&&noCaixa(e)&&e.tipo!=='transf'); // transferências internas ficam fora; respeita a janela de dias do usuário
   // filtro de movimentações pessoais: 'sem' (só empresa) | 'com' (tudo) | 'so' (somente pessoais)
   if(pess==='sem')ls=ls.filter(e=>!e.pessoal);
   else if(pess==='so')ls=ls.filter(e=>e.pessoal);
@@ -3797,7 +3882,7 @@ Object.assign(window,{
   addSocio,delSocio,renameSocio,onFxTipoChange,toggleRetirada,
   buscaGlobal,gsIr,
   setCaixaParceria,setCaixaComissao,renderComissoes,imprimirComissoes,
-  askPin,backToPicker,delBoleto,delCaixa,delConta,renameConta,delPagar,delReceber,delVeic,dropOFX,
+  askPin,backToPicker,fazerLogin,esqueciSenha,delBoleto,delCaixa,delConta,renameConta,delPagar,delReceber,delVeic,dropOFX,
   exportRelatorioCSV,fileOFX,gerarRelatorio,logout,
   ofxSetCat,ofxSetDestino,ofxSetSocio,resolverDiv,ofxToggle,ofxSelAll,ofxSelGrupo,filterC,importSelecionados,
   conciliarAuto,categorizarMassa,baixaAutomatica,ignorarSelecionados,
@@ -3806,7 +3891,7 @@ Object.assign(window,{
   onDcfTipoChange,onRoleChange,openVeicForm,pagarBoleto,pagarConta,pinClear,
   pinDel,pinPress,receberConta,removeFlux,removeUser,renameCaixa,renderDRE,
   renderFluxo,renderPagas,renderPlacas,renderRateio,resetData,setCaixa,
-  setUserCaixa,setUserField,sp,toggleUserMod,toggleUserPage,updateDcfPreview,zerarDadosFinanceiros,limparMovimentacoes,
+  setUserCaixa,setUserDias,setUserField,sp,toggleUserMod,toggleUserPage,updateDcfPreview,zerarDadosFinanceiros,limparMovimentacoes,
   exportBackup,importBackup,fecharMes,reabrirMes,addTransfer,gerarContaComissao,setOrcamento,anexarComprovante,verComprovante,fecharAnexo,removerAnexo,
   toggleMenu,closeMenu,exportPagasCSV,
   addCategoria,renameCategoria,setCategoriaCor,delCategoria,maskDate,
@@ -3817,8 +3902,10 @@ Object.assign(window,{
 
 /* ── INIT ── */
 load();
-renderProfiles();
-cloudStatus('Conectando à nuvem…','sync');
+// login por e-mail: a tela de login aparece; cloudInit observa o estado de autenticação
+document.getElementById('login').style.display='flex';
+document.getElementById('app').style.display='none';
+cloudStatus('Conectando…','sync');
 cloudInit();
 </script>
 </body>
