@@ -2771,13 +2771,17 @@ function seedCategorias(){
     ['Água','var(--gr)'],['Telefone e Internet','var(--ment)'],['Sistemas (softwares)','var(--gr)'],
     ['Serviços Contratados','var(--peace)'],['Material de Escritório','var(--t3)'],['Fornecedores','var(--peace)'],
     ['Impostos sobre Receita','var(--mkt)'],['Taxas e Contribuições','var(--com)'],['Taxas Bancárias','var(--com)'],
-    ['Taxas financeiras / maquininha','var(--com)'],['PIX Pago','var(--peace)'],['Pagamento Operacional','var(--peace)'],['Multas','var(--peace)'],['Outras Despesas','var(--t3)']
+    ['Taxas financeiras / maquininha','var(--com)'],['PIX Pago','var(--peace)'],['Pagamento Operacional','var(--peace)'],['Multas','var(--peace)'],['Outras Despesas','var(--t3)'],
+    /* plano de contas Joel Transportes (planilha 2025-10-22) — grafia preservada p/ bater com o histórico */
+    ['Custos produto vendido','var(--peace)'],['Custo serviço prestado','var(--peace)'],['SISTEMAS','var(--peace)'],['Luz','var(--com)'],['Despesas financeiras','var(--com)'],['Tarifa bancária','var(--com)'],['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--com)'],['FATURA CARTAO DE CREDITO','var(--com)'],['TAXAS DE EMBARQUE','var(--com)'],['DESPESAS COMBUSTIVEL','var(--com)'],['FRETE DE ONIBUS','var(--com)'],['TAXA PEDAGIO','var(--com)'],['MANUTENÇÃO','var(--com)'],['Compra de ativo fixo','var(--ment)'],['IMOBILIARIO','var(--ment)'],['Pagamento de empréstimo','var(--mkt)'],['Retirada de capital','var(--mkt)'],['EMPRESTIMO BANCARIO','var(--mkt)'],['FINANCIAMENTO','var(--mkt)']
   ];
   const entrada=[
     ['Receita com Frete','var(--nipi)'],['Frete de Mercadoria','var(--nipi)'],['Vendas','var(--nipi)'],['Serviços','var(--gr)'],
     ['Cartão de Crédito','var(--gr)'],['Cartão de Débito','var(--gr)'],
     ['Rede / Mastercard','var(--ment)'],['Cielo','var(--ment)'],['Getnet','var(--ment)'],['Stone','var(--ment)'],['PIX Recebido','var(--nipi)'],
-    ['Recebimentos','var(--nipi)'],['Adiantamento de Cliente','var(--gr)'],['Rendimentos','var(--ment)'],['Outras Receitas','var(--t3)']
+    ['Recebimentos','var(--nipi)'],['Adiantamento de Cliente','var(--gr)'],['Rendimentos','var(--ment)'],['Outras Receitas','var(--t3)'],
+    /* plano de contas Joel Transportes (planilha 2025-10-22) */
+    ['Receita com vendas','var(--nipi)'],['Receita com serviços','var(--nipi)'],['TRANSFERÊNCIAS ENTRE CONTAS BANCARIAS','var(--nipi)'],['RECIBOMENTO DE DINHEIRO','var(--nipi)'],['DEMONSTRATIVO','var(--nipi)'],['RECEBIMENTO DE PIX','var(--nipi)'],['Venda de ativo fixo','var(--ment)'],['Obtenção de empréstimo','var(--mkt)'],['Aporte de capital','var(--mkt)']
   ];
   const mk=(arr,tipo)=>arr.map(([nome,cor])=>({id:'cat_'+uid(),nome,tipo,cor}));
   return [...mk(entrada,'entrada'),...mk(saida,'saida')];
