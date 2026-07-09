@@ -336,8 +336,8 @@ textarea{resize:vertical;min-height:60px}
         <div id="dashOrcamento"></div>
         <div id="dashKpis" class="kpi-grid"></div>
         <div id="dashAlertas"></div>
-        <div class="g2">
-          <div class="card"><div class="ctitle">Receitas <span style="color:var(--t3)">×</span> Despesas <span style="font-weight:400;color:var(--t3);font-size:11px">· Últimos 6 meses</span></div><div id="dashChart"></div></div>
+        <div class="g2" id="dashG2">
+          <div class="card" id="dashChartCard"><div class="ctitle">Receitas <span style="color:var(--t3)">×</span> Despesas <span id="dashChartSub" style="font-weight:400;color:var(--t3);font-size:11px">· Últimos 6 meses</span></div><div id="dashChart"></div></div>
           <div class="card" id="dashVenc"></div>
         </div>
       </div>
@@ -1561,7 +1561,7 @@ function renderFluxo(){
   renderTransferCard();
   onFxTipoChange();
   const ji=document.getElementById('fxJanelaInfo');
-  if(ji){const n=limiteDias();ji.innerHTML=n?`<div style="font-size:11.5px;color:var(--t3);margin:2px 0 8px">👁 Mostrando os últimos ${n} dias de movimentações.</div>`:'';}
+  if(ji){const n=limiteDias();ji.innerHTML=n?`<div style="font-size:11.5px;color:var(--t3);margin:2px 0 8px">👁 Mostrando ${rotuloJanela(n)} de movimentações.</div>`:'';}
   // escopo do fluxo
   renderCaixaFilter('fxCaixaFilter');
   // subtítulo conforme papel
@@ -1650,17 +1650,19 @@ function renderOnboarding(){
     </div>`;
 }
 function renderDash(){
+  const nJ=limiteDias();
   const scope=document.getElementById('dashScope');
   if(scope){
-    const nJ=limiteDias();
-    const chip=nJ?` · 👁 últimos ${nJ} dias`:'';
-    if(isFull()){renderCaixaFilter('dashScope');if(nJ){const ex=document.createElement('div');ex.style.cssText='margin:-4px 0 .8rem;font-size:11.5px;color:var(--t3)';ex.textContent='👁 Mostrando os últimos '+nJ+' dias de movimentações.';scope.appendChild(ex);}}
+    const chip=nJ?` · 👁 ${rotuloJanela(nJ)}`:'';
+    if(isFull()){renderCaixaFilter('dashScope');if(nJ){const ex=document.createElement('div');ex.style.cssText='margin:-4px 0 .8rem;font-size:11.5px;color:var(--t3)';ex.textContent='👁 Mostrando '+rotuloJanela(nJ)+' de movimentações.';scope.appendChild(ex);}}
     else{scope.innerHTML=`<div style="margin-bottom:.9rem;font-size:12px;color:var(--t3)">Resumo do seu caixa pessoal · <strong style="color:var(--t2)">${esc(CU)}</strong>${chip}</div>`;}
   }
   const dd=document.getElementById('ddate');
   if(dd)dd.textContent='Visão rápida da situação financeira · '+toBR(new Date().toISOString().slice(0,10));
   renderOnboarding();
   const all=scopedFlux();
+  // quem tem janela de dias vê um painel coerente com o período visível
+  if(nJ){renderDashJanela(all,nJ);return;}
   const saldo=all.reduce((s,e)=>s+(e.tipo==='entrada'?e.val:(e.tipo==='saida'?-e.val:0)),0); // saldo real (transferências internas não mudam o total)
   const cm=new Date().toISOString().slice(0,7);
   // receitas/despesas da EMPRESA excluem retiradas de sócio (pessoal)
@@ -1687,10 +1689,78 @@ function renderDash(){
     +met('Contas a vencer',money(aVencer),'var(--gr)','Em aberto no prazo')
     +(canSeeSocios()&&mRetiradas!==0?met('Movimentações pessoais',money(mRetiradas),'var(--mkt)','Saídas pessoais no mês'):'')
     +met('Caixa projetado',money(projetado),projetado>=0?'var(--pos)':'var(--neg)','Saldo + a receber − a pagar');
+  const sub=document.getElementById('dashChartSub');if(sub)sub.textContent='· Últimos 6 meses';
+  const cardV=document.getElementById('dashVenc');if(cardV)cardV.style.display='';
   renderDashChart(all,cm);
   renderDashOrcamento();
   renderVencimentos();
   renderAlertas();
+}
+/* rótulo humano da janela: 1 dia = "hoje", senão "últimos N dias" */
+function rotuloJanela(n){return n===1?'somente hoje':('últimos '+n+' dias');}
+/* ── DASHBOARD DA JANELA (para usuários com visão limitada a N dias) ──
+   Nada de "mês", "inadimplência" ou "projeção": só o que existe dentro do período visível. */
+function renderDashJanela(all,n){
+  const corte=dataCorte();
+  const hoje=new Date().toISOString().slice(0,10);
+  // dentro da janela, "all" já vem filtrado por scopedFlux()
+  const ent=all.filter(e=>e.tipo==='entrada'&&!e.pessoal).reduce((s,e)=>s+e.val,0);
+  const sai=all.filter(e=>e.tipo==='saida'&&!e.pessoal).reduce((s,e)=>s+e.val,0);
+  const res=ent-sai;
+  const entHoje=all.filter(e=>e.tipo==='entrada'&&!e.pessoal&&e.d===hoje).reduce((s,e)=>s+e.val,0);
+  const saiHoje=all.filter(e=>e.tipo==='saida'&&!e.pessoal&&e.d===hoje).reduce((s,e)=>s+e.val,0);
+  const nLanc=all.filter(e=>e.tipo!=='transf').length;
+  const pess=all.filter(e=>e.pessoal).reduce((s,e)=>s+(e.tipo==='saida'?e.val:-e.val),0);
+  const rot=rotuloJanela(n);
+  const k=document.getElementById('dashKpis');
+  if(k)k.innerHTML=
+     met('Entradas · '+rot,money(ent),'var(--pos)',n===1?'Recebido hoje':'Recebido no período')
+    +met('Saídas · '+rot,money(sai),'var(--neg)',n===1?'Pago hoje':'Pago no período')
+    +met('Resultado do período',money(res),res>=0?'var(--pos)':'var(--neg)','Entradas − saídas')
+    +met('Entradas de hoje',money(entHoje),'var(--pos)',toBR(hoje))
+    +met('Saídas de hoje',money(saiHoje),'var(--neg)',toBR(hoje))
+    +met('Lançamentos',String(nLanc),'var(--gr)',n===1?'Registrados hoje':'No período visível')
+    +(canSeeSocios()&&pess!==0?met('Movimentações pessoais',money(pess),'var(--mkt)','No período visível'):'');
+  // gráfico por DIA (não por mês)
+  const sub=document.getElementById('dashChartSub');if(sub)sub.textContent='· '+(n===1?'Hoje':'Dia a dia · '+rot);
+  renderDashChartDias(all,n);
+  // painéis que não fazem sentido dentro da janela ficam ocultos
+  const cardV=document.getElementById('dashVenc');if(cardV)cardV.style.display='none';
+  const orc=document.getElementById('dashOrcamento');if(orc)orc.innerHTML='';
+  const al=document.getElementById('dashAlertas');if(al)al.innerHTML='';
+}
+/* gráfico de barras entradas × saídas, um grupo por dia da janela */
+function renderDashChartDias(all,n){
+  const el=document.getElementById('dashChart');if(!el)return;
+  const dias=[];
+  for(let i=n-1;i>=0;i--){const x=new Date();x.setDate(x.getDate()-i);dias.push(x.toISOString().slice(0,10));}
+  const G=dias.map(d=>({d,
+    en:all.filter(e=>e.tipo==='entrada'&&!e.pessoal&&e.d===d).reduce((s,e)=>s+e.val,0),
+    sa:all.filter(e=>e.tipo==='saida'&&!e.pessoal&&e.d===d).reduce((s,e)=>s+e.val,0)}));
+  const MX=Math.max(...G.map(g=>Math.max(g.en,g.sa)),1);
+  const temDado=G.some(g=>g.en>0||g.sa>0);
+  if(!temDado){
+    el.innerHTML=`<div class="empty" style="padding:1.6rem .6rem;text-align:center"><div style="font-size:24px;margin-bottom:6px">📊</div><div style="font-weight:600;font-size:13px;color:var(--t2)">Nenhuma movimentação ${n===1?'hoje':'no período'}</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px">Os lançamentos aparecem aqui assim que forem registrados.</div></div>`;
+    return;
+  }
+  const W=440,H=130,PB=28,PH=H-PB-8,GW=W/Math.max(G.length,1);
+  const bw=Math.max(4,Math.min(15,GW/2.6));
+  let bars='',lbls='';
+  G.forEach((g,i)=>{
+    const cx=i*GW+GW/2;
+    const hE=g.en>0?Math.max(g.en/MX*PH,1):0, hS=g.sa>0?Math.max(g.sa/MX*PH,1):0;
+    if(hE)bars+=`<rect x="${(cx-bw-1).toFixed(1)}" y="${(H-PB-hE).toFixed(1)}" width="${bw.toFixed(1)}" height="${hE.toFixed(1)}" rx="2" fill="#6FD69A" opacity=".9"><title>${toBR(g.d)} · entradas ${money(g.en)}</title></rect>`;
+    if(hS)bars+=`<rect x="${(cx+1).toFixed(1)}" y="${(H-PB-hS).toFixed(1)}" width="${bw.toFixed(1)}" height="${hS.toFixed(1)}" rx="2" fill="#EC8B6E" opacity=".88"><title>${toBR(g.d)} · saídas ${money(g.sa)}</title></rect>`;
+    // rótulo: dia/mês curto; se a janela for grande, mostra dia sim dia não
+    const mostrar=G.length<=10||i%2===0||i===G.length-1;
+    if(mostrar){
+      const dt=g.d.slice(8,10)+'/'+g.d.slice(5,7);
+      const hj=g.d===new Date().toISOString().slice(0,10);
+      lbls+=`<text x="${cx}" y="${H-9}" text-anchor="middle" font-size="9.5" fill="${hj?'#C8D3F0':'#8194C6'}" font-weight="${hj?'700':'400'}">${hj?'hoje':dt}</text>`;
+    }
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:140px;overflow:visible">${bars}${lbls}</svg>
+  <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--t2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#6FD69A"></span>Entradas</span><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#EC8B6E"></span>Saídas</span></div>`;
 }
 /* painel de vencimentos próximos no dashboard (cobrança/lembretes) */
 function renderVencimentos(){
@@ -2559,7 +2629,7 @@ function renderUsers(){
           <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="removeUser('${u.user}')">Remover</button>
         </div>
       </div>
-      ${u.role!=='gestor'?`<div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--t2);font-weight:600">Vê os últimos</span><input type="number" min="0" step="1" value="${u.dias===undefined||u.dias===null||u.dias===''?'':u.dias}" placeholder="${u.role==='membro'?'7':'sem limite'}" onchange="setUserDias('${u.user}',this.value)" style="width:76px;font-size:12px;padding:4px 8px;text-align:center"><span style="font-size:11px;color:var(--t2);font-weight:600">dias</span><span style="font-size:10.5px;color:var(--t3)">(vazio = ${u.role==='membro'?'padrão 7 dias':'sem limite'} · 0 = sem limite)</span></div>`:''}
+      ${u.role!=='gestor'?`<div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--t2);font-weight:600">Vê os últimos</span><input type="number" min="0" step="1" value="${u.dias===undefined||u.dias===null||u.dias===''?'':u.dias}" placeholder="${u.role==='membro'?'7':'sem limite'}" onchange="setUserDias('${u.user}',this.value)" style="width:76px;font-size:12px;padding:4px 8px;text-align:center"><span style="font-size:11px;color:var(--t2);font-weight:600">dias</span><span style="font-size:10.5px;color:var(--t3)">(vazio = ${u.role==='membro'?'padrão 7 dias':'sem limite'} · 0 = sem limite · 1 = só hoje)</span></div>`:''}
       <div class="stitle" style="margin:0 0 5px">${isMembro?'Painéis visíveis para este membro':(isFullRole?'Páginas visíveis para este usuário':'Permissões')}</div>
       <div class="modgrid">${mods}</div>
       ${isMembro?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--t2);font-weight:600">Caixa atribuído:</span><select onchange="setUserCaixa('${u.user}',this.value)" style="width:auto;font-size:12px;padding:4px 8px"><option value="">Sem caixa</option>${S.caixas.map(c=>`<option value="${c.id}" ${u.caixaId===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div>`:''}
