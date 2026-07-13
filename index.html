@@ -671,6 +671,40 @@ textarea{resize:vertical;min-height:60px}
         <div class="card"><div class="ctitle">Movimentações realizadas</div><div id="pagasTable"><div class="empty">Nenhuma movimentação no período</div></div></div>
       </div>
 
+      <!-- DUPLICATAS -->
+      <div id="page-duplicatas" class="page">
+        <div class="ptitle">Duplicatas</div>
+        <div class="psub">Com várias pessoas lançando, a mesma entrada ou saída às vezes é registrada duas vezes. Aqui o sistema agrupa os prováveis duplicados — e você também pode marcar manualmente os que ele não pegou.</div>
+        <div class="filter-bar">
+          <button class="caixa-pill on" id="dup_tab_auto" onclick="dupModo('auto')">🔎 Detectadas pelo sistema</button>
+          <button class="caixa-pill" id="dup_tab_manual" onclick="dupModo('manual')">✋ Selecionar manualmente</button>
+        </div>
+        <div class="filter-bar">
+          <select id="dup_per" onchange="renderDuplicatas()" style="width:auto">
+            <option value="mes">Mês atual</option>
+            <option value="trim">Trimestre</option>
+            <option value="ano">Ano</option>
+            <option value="tudo">Tudo</option>
+          </select>
+          <select id="dup_rigor" onchange="renderDuplicatas()" style="width:auto" title="O que conta como provável duplicata">
+            <option value="normal">Rigor normal (valor + data próxima + descrição)</option>
+            <option value="rigido">Mais rígido (valor + mesma data)</option>
+            <option value="frouxo">Mais amplo (valor + descrição)</option>
+          </select>
+          <input id="dup_busca" placeholder="🔍 Buscar (modo manual)" oninput="renderDupManual()" style="width:auto;display:none">
+        </div>
+        <!-- modo automático -->
+        <div id="dupAuto">
+          <div id="dupResumo" style="margin-bottom:12px"></div>
+          <div id="dupGrupos"><div class="empty">Escolha um período para procurar duplicatas.</div></div>
+        </div>
+        <!-- modo manual: fluxo completo com seleção -->
+        <div id="dupManual" style="display:none">
+          <div id="dupManualBar" style="margin-bottom:10px"></div>
+          <div class="card"><div class="ctitle">Fluxo completo do período <span style="font-weight:400;color:var(--t3);font-size:11px">· marque 2 ou mais que são a mesma coisa</span></div><div id="dupManualTable"></div></div>
+        </div>
+      </div>
+
       <!-- RELATÓRIOS -->
       <div id="page-relatorios" class="page">
         <div class="ptitle">Relatórios por Período</div>
@@ -931,6 +965,12 @@ textarea{resize:vertical;min-height:60px}
 
 <!-- Scripts clássicos: compartilham o mesmo escopo global, na ordem de dependência -->
 
+
+
+
+
+
+<!-- Módulo (carrega por último): Firebase, autenticação, sincronização e arranque -->
 <script>
 /* ══════════════════════════════════════════════════════════
    Auricélia Transportes · Central Financeira
@@ -969,8 +1009,8 @@ const MODS=[
 const ALLMODS=MODS.map(m=>m.id);
 
 /* páginas de cada papel */
-const PAGES_FULL=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes']; // operacional + dona (visão completa + ferramentas avançadas)
-const PAGES_ADMIN=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes','equipa','categorias','config']; // gestor admin (tudo + sistema)
+const PAGES_FULL=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes','duplicatas']; // operacional + dona (visão completa + ferramentas avançadas)
+const PAGES_ADMIN=['dashboard','fluxo','receber','pagar','pagas','boletos','dre','placas','rateio','concil','relatorios','socios','comissoes','duplicatas','equipa','categorias','config']; // gestor admin (tudo + sistema)
 
 /* áreas */
 const DEPTL={diretoria:'Diretoria',financeiro:'Financeiro',administrativo:'Administrativo',operacional:'Operacional',comercial:'Comercial',caixa:'Caixa'};
@@ -1244,6 +1284,7 @@ const NAV=[
   {id:'comissoes',l:'Comissão por Caixa',dot:'var(--com)',sec:''},
   {id:'concil',l:'Conciliação OFX',dot:'var(--com)',sec:''},
   {id:'relatorios',l:'Relatórios',dot:'var(--text)',sec:''},
+  {id:'duplicatas',l:'Duplicatas',dot:'var(--com)',sec:''},
   {id:'socios',l:'Movimentações Pessoais',dot:'var(--mkt)',sec:''},
   {id:'equipa',l:'Equipa',ico:'◷',sec:'Sistema'},
   {id:'categorias',l:'Categorias',ico:'🏷',sec:'Gestor'},
@@ -3993,14 +4034,216 @@ function renderAll(){
   renderDash();renderFluxo();renderReceber();renderPagar();renderBoletos();renderEquipa();
   renderPagas();renderRelCaixaSelect();
   if(canSeeSocios())renderSociosConta();
-  if(isFull()){renderDRE();renderPlacas();renderRateio();renderConcil();renderComissoes();}
+  if(isFull()){renderDRE();renderPlacas();renderRateio();renderConcil();renderComissoes();if(DUP_MODO==='manual')renderDupManual();else renderDuplicatas();}
   if(CR==='gestor'){renderAreaSelect();renderUsers();renderCaixaList();renderContaList();renderCaixaAssignSelect();renderCategorias();renderFechados();renderOrcamentoList();const cm=document.getElementById('cu_mods');if(cm&&!cm.children.length)renderModChecks('cu_mods',[]);onRoleChange();}
 }
 
+/* ══════════════════════════════════════════════════════════
+   DUPLICATAS — o financeiro revisa e junta lançamentos repetidos
+   ══════════════════════════════════════════════════════════ */
+
+/* normaliza a descrição para comparar: minúsculas, sem acento, sem pontuação */
+function normDesc(s){
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+/* semelhança simples entre duas descrições (0 a 1) por palavras em comum */
+function simDesc(a,b){
+  const A=new Set(normDesc(a).split(' ').filter(Boolean));
+  const B=new Set(normDesc(b).split(' ').filter(Boolean));
+  if(!A.size||!B.size)return 0;
+  let inter=0;A.forEach(w=>{if(B.has(w))inter++;});
+  return inter/Math.max(A.size,B.size);
+}
+function diffDias(d1,d2){
+  return Math.abs((new Date(d1+'T00:00:00')-new Date(d2+'T00:00:00'))/86400000);
+}
+/* dois lançamentos são prováveis duplicatas? (conforme o rigor escolhido) */
+function saoDuplicatas(a,b,rigor){
+  if(a.id===b.id)return false;
+  if(a.tipo!==b.tipo)return false;                 // entrada só casa com entrada
+  if(Math.abs(a.val-b.val)>0.005)return false;     // mesmo valor (sempre)
+  if(rigor==='rigido')  return a.d===b.d;                                  // + mesma data
+  if(rigor==='frouxo')  return simDesc(a.desc,b.desc)>=0.5;                 // + descrição parecida
+  /* normal */          return diffDias(a.d,b.d)<=2 && simDesc(a.desc,b.desc)>=0.5; // data próxima + descrição
+}
+/* agrupa os lançamentos do período em conjuntos de prováveis duplicatas */
+function acharGruposDuplicados(per,rigor){
+  let ls=aplicaJanela(S.flux).filter(e=>e.tipo!=='transf'); // transferências não entram
+  ls=filtraPeriodo(ls,per,'d');
+  const usados=new Set(), grupos=[];
+  for(let i=0;i<ls.length;i++){
+    if(usados.has(ls[i].id))continue;
+    const grupo=[ls[i]];
+    for(let j=i+1;j<ls.length;j++){
+      if(usados.has(ls[j].id))continue;
+      // casa com QUALQUER item já no grupo (encadeia repetições)
+      if(grupo.some(g=>saoDuplicatas(g,ls[j],rigor))){grupo.push(ls[j]);usados.add(ls[j].id);}
+    }
+    if(grupo.length>1){usados.add(ls[i].id);grupos.push(grupo);}
+  }
+  // grupos com mais itens e valores maiores primeiro
+  grupos.sort((a,b)=>(b.length-a.length)||(b[0].val-a[0].val));
+  return grupos;
+}
+/* filtra por período reutilizando a lógica existente */
+function filtraPeriodo(lista,per,campo){
+  if(per==='tudo')return lista;
+  const now=new Date();
+  if(per==='mes')return lista.filter(l=>l[campo]&&l[campo].startsWith(now.toISOString().slice(0,7)));
+  if(per==='trim'){const t=Math.floor(now.getMonth()/3)*3;return lista.filter(l=>{if(!l[campo])return false;const m=parseInt(l[campo].slice(5,7))-1;return l[campo].startsWith(String(now.getFullYear()))&&m>=t&&m<=t+2});}
+  if(per==='ano')return lista.filter(l=>l[campo]&&l[campo].startsWith(String(now.getFullYear())));
+  return lista;
+}
+
+let DUP_MANTER={}; // grupoIdx → id do lançamento escolhido para manter
+
+function renderDuplicatas(){
+  const wrap=document.getElementById('dupGrupos');if(!wrap)return;
+  if(!isFull()){wrap.innerHTML='<div class="empty">Sem permissão.</div>';return;}
+  const per=v('dup_per')||'mes';
+  const rigor=v('dup_rigor')||'normal';
+  const grupos=acharGruposDuplicados(per,rigor);
+  DUP_MANTER={};
+  const resumo=document.getElementById('dupResumo');
+  if(!grupos.length){
+    if(resumo)resumo.innerHTML='';
+    wrap.innerHTML='<div class="empty-rich"><div style="font-size:30px">✅</div><div style="font-weight:600">Nenhuma duplicata provável no período</div><div style="font-size:12px;color:var(--t3);margin-top:4px">Se você suspeita de repetições, tente o rigor "Mais amplo".</div></div>';
+    return;
+  }
+  const totalItens=grupos.reduce((s,g)=>s+g.length,0);
+  const excedentes=totalItens-grupos.length; // quantos sobram se juntar cada grupo em 1
+  const valorExced=grupos.reduce((s,g)=>s+g[0].val*(g.length-1),0);
+  if(resumo)resumo.innerHTML=`<div class="card" style="border-left:3px solid var(--com)">
+    <strong>${grupos.length}</strong> grupo(s) de prováveis duplicatas · <strong>${excedentes}</strong> lançamento(s) a mais somando <strong style="color:var(--neg)">${money(valorExced)}</strong> em possível duplicação.
+    <div style="font-size:12px;color:var(--t3);margin-top:5px">Revise cada grupo. Escolha qual manter (radio à esquerda) e toque em "Juntar" — os demais serão removidos.</div>
+  </div>`;
+
+  wrap.innerHTML=grupos.map((g,gi)=>{
+    DUP_MANTER[gi]=g[0].id; // padrão: mantém o mais antigo (primeiro)
+    const linhas=g.map((e,ei)=>`
+      <label class="row" style="cursor:pointer;align-items:flex-start;gap:10px">
+        <input type="radio" name="dupkeep_${gi}" value="${e.id}" ${ei===0?'checked':''} onchange="dupEscolhe(${gi},'${e.id}')" style="margin-top:3px">
+        <div style="flex:1;min-width:0">
+          <div class="rlabel">${e.tipo==='entrada'?'＋':'－'} ${money(e.val)} · ${esc(e.desc||'—')}</div>
+          <div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.forma?' · '+esc(formaLabel(e.forma)):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}${e.by?' · lançado por <strong>'+esc(e.by)+'</strong>':''}</div>
+        </div>
+      </label>`).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="ctitle" style="margin:0">Grupo ${gi+1} · ${g.length} lançamentos iguais</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btnsm" onclick="dupIgnora(${gi})" title="Não são duplicatas — esconder este grupo">Não são iguais</button>
+          <button class="btn btnsm btnp" onclick="dupJuntar(${gi})">Juntar (manter 1)</button>
+        </div>
+      </div>
+      ${linhas}
+    </div>`;
+  }).join('');
+}
+function dupEscolhe(gi,id){DUP_MANTER[gi]=id;}
+
+/* ── MODO MANUAL: fluxo completo com seleção livre ── */
+let DUP_MODO='auto';
+let DUP_SEL=new Set(); // ids marcados manualmente
+function dupModo(m){
+  DUP_MODO=m;DUP_SEL.clear();
+  document.getElementById('dupAuto').style.display=m==='auto'?'':'none';
+  document.getElementById('dupManual').style.display=m==='manual'?'':'none';
+  document.getElementById('dup_rigor').style.display=m==='auto'?'':'none';
+  document.getElementById('dup_busca').style.display=m==='manual'?'':'none';
+  document.getElementById('dup_tab_auto').classList.toggle('on',m==='auto');
+  document.getElementById('dup_tab_manual').classList.toggle('on',m==='manual');
+  if(m==='manual')renderDupManual();else renderDuplicatas();
+}
+function dupToggle(id){
+  if(DUP_SEL.has(id))DUP_SEL.delete(id);else DUP_SEL.add(id);
+  atualizaDupManualBar();
+}
+function atualizaDupManualBar(){
+  const bar=document.getElementById('dupManualBar');if(!bar)return;
+  const sel=[...DUP_SEL].map(id=>S.flux.find(e=>e.id===id)).filter(Boolean);
+  if(sel.length<1){bar.innerHTML='<div style="font-size:12.5px;color:var(--t3)">Marque 2 ou mais lançamentos que são a mesma coisa para poder juntá-los.</div>';return;}
+  const total=sel.reduce((s,e)=>s+e.val,0);
+  const valores=[...new Set(sel.map(e=>e.val.toFixed(2)))];
+  const aviso=valores.length>1?'<span style="color:var(--warnt)"> ⚠ valores diferentes — confira se são mesmo duplicatas</span>':'';
+  bar.innerHTML=`<div class="card" style="border-left:3px solid var(--com);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div style="font-size:13px"><strong>${sel.length}</strong> selecionado(s)${aviso}</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btnsm" onclick="dupLimparSel()">Limpar seleção</button>
+      <button class="btn btnsm btnp" onclick="dupJuntarManual()" ${sel.length<2?'disabled style=opacity:.5':''}>Juntar selecionados (manter 1)</button>
+    </div>
+  </div>`;
+}
+function dupLimparSel(){DUP_SEL.clear();renderDupManual();}
+function renderDupManual(){
+  const el=document.getElementById('dupManualTable');if(!el)return;
+  if(!isFull()){el.innerHTML='<div class="empty">Sem permissão.</div>';return;}
+  const per=v('dup_per')||'mes';
+  const q=normDesc(v('dup_busca')||'');
+  let ls=aplicaJanela(S.flux).filter(e=>e.tipo!=='transf');
+  ls=filtraPeriodo(ls,per,'d');
+  if(q)ls=ls.filter(e=>normDesc(e.desc).includes(q)||String(e.val).includes(q));
+  ls=ls.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d))||b.val-a.val);
+  if(!ls.length){el.innerHTML='<div class="empty">Nenhum lançamento no período.</div>';atualizaDupManualBar();return;}
+  el.innerHTML=ls.map(e=>`
+    <label class="row" style="cursor:pointer;align-items:flex-start;gap:10px">
+      <input type="checkbox" ${DUP_SEL.has(e.id)?'checked':''} onchange="dupToggle('${e.id}')" style="margin-top:3px">
+      <div style="flex:1;min-width:0">
+        <div class="rlabel">${e.tipo==='entrada'?'＋':'－'} ${money(e.val)} · ${esc(e.desc||'—')}</div>
+        <div class="rsub">${fmt(e.d)}${e.cat?' · '+esc(e.cat):''}${e.forma?' · '+esc(formaLabel(e.forma)):''}${e.caixaId?' · '+esc(caixaNome(e.caixaId)):''}${e.by?' · lançado por <strong>'+esc(e.by)+'</strong>':''}</div>
+      </div>
+    </label>`).join('');
+  atualizaDupManualBar();
+}
+function dupJuntarManual(){
+  const sel=[...DUP_SEL].map(id=>S.flux.find(e=>e.id===id)).filter(Boolean);
+  if(sel.length<2){toast('Marque ao menos 2 lançamentos.','err');return;}
+  // mês fechado bloqueia
+  const bloq=sel.find(e=>mesFechado(e.d));
+  if(bloq){toast('Há lançamento em mês fechado na seleção. Reabra o mês para juntar.','err');return;}
+  // escolhe qual manter: o mais antigo por data (empate: o primeiro)
+  const manter=sel.slice().sort((a,b)=>String(a.d).localeCompare(String(b.d)))[0];
+  const remover=sel.filter(e=>e.id!==manter.id);
+  const resumo='Manter: '+money(manter.val)+' · '+(manter.desc||'')+' ('+fmt(manter.d)+')\n\nRemover '+remover.length+':\n'+remover.map(e=>'• '+money(e.val)+' · '+(e.desc||'')+' ('+fmt(e.d)+')'+(e.by?' — '+e.by:'')).join('\n');
+  if(!confirm('JUNTAR os selecionados?\n\n'+resumo+'\n\nMantém o mais antigo. Esta ação não pode ser desfeita.'))return;
+  const ids=new Set(remover.map(e=>e.id));
+  S.flux=S.flux.filter(e=>!ids.has(e.id));
+  log('Duplicatas juntadas manualmente: manteve "'+(manter.desc||'')+'" ('+money(manter.val)+'), removeu '+remover.length);
+  DUP_SEL.clear();
+  save();renderDupManual();renderFluxo();renderDash();
+  toast(remover.length+' lançamento(s) removido(s). Mantido o mais antigo.','ok');
+}
+let DUP_IGNORADOS=new Set();
+function dupIgnora(gi){
+  // apenas esconde visualmente nesta sessão (não altera dados)
+  const cards=document.querySelectorAll('#dupGrupos > .card');
+  if(cards[gi])cards[gi].style.display='none';
+  toast('Grupo marcado como "não são iguais" e escondido.','info');
+}
+function dupJuntar(gi){
+  const per=v('dup_per')||'mes', rigor=v('dup_rigor')||'normal';
+  const grupos=acharGruposDuplicados(per,rigor);
+  const g=grupos[gi];if(!g){renderDuplicatas();return;}
+  const manterId=DUP_MANTER[gi]||g[0].id;
+  const manter=g.find(e=>e.id===manterId);
+  const remover=g.filter(e=>e.id!==manterId);
+  if(!remover.length){toast('Escolha ao menos um para remover.','err');return;}
+  // não deixa mexer em mês fechado
+  const bloq=g.find(e=>mesFechado(e.d));
+  if(bloq){toast('Há lançamento em mês fechado neste grupo. Reabra o mês para juntar.','err');return;}
+  const resumo='Manter: '+money(manter.val)+' · '+(manter.desc||'')+' ('+fmt(manter.d)+')\n\nRemover '+remover.length+' duplicata(s):\n'+remover.map(e=>'• '+money(e.val)+' · '+(e.desc||'')+' ('+fmt(e.d)+')'+(e.by?' — '+e.by:'')).join('\n');
+  if(!confirm('JUNTAR DUPLICATAS?\n\n'+resumo+'\n\nEsta ação não pode ser desfeita.'))return;
+  const ids=new Set(remover.map(e=>e.id));
+  S.flux=S.flux.filter(e=>!ids.has(e.id));
+  log('Duplicatas juntadas: manteve '+money(manter.val)+' "'+(manter.desc||'')+'", removeu '+remover.length);
+  save();renderDuplicatas();renderFluxo();renderDash();
+  toast(remover.length+' duplicata(s) removida(s). Mantido 1 lançamento.','ok');
+}
 /* ── exposição global (necessário porque o script é type="module") ── */
 
 </script>
-<!-- Módulo (carrega por último): Firebase, autenticação, sincronização e arranque -->
 <script type="module">
 /* ════════════════════════════════════════
    FIREBASE · sincronização em nuvem (Firestore)
