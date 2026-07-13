@@ -404,7 +404,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="card">
           <div class="ctitle">Nova conta a receber</div>
           <div class="mf">
-            <div class="ir"><input id="rc_cli" placeholder="Cliente / origem"><input id="rc_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px"><button class="btn btnsm" onclick="buscarCNPJReceber()">🔎 CNPJ</button></div>
+            <div class="ir"><input id="rc_cli" placeholder="Cliente / origem" list="forn_list" oninput="onFornInput('rc')"><input id="rc_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px"><button class="btn btnsm" onclick="buscarCNPJReceber()">🔎 CNPJ</button></div>
             <div class="ir"><input type="text" id="rc_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="rc_desc" placeholder="Descrição" oninput="autoCat('rc')"></div>
             <div class="ir"><select id="rc_cat"></select><input type="number" id="rc_val" placeholder="Valor (R$)" step="0.01" min="0"></div>
             <div class="ir"><input id="rc_cc" placeholder="Centro de custo (opcional)" list="cc_list"></div>
@@ -441,8 +441,9 @@ textarea{resize:vertical;min-height:60px}
               <button class="btn btnsm btnnipi" onclick="lerBoletoPagar()">Ler boleto</button>
             </div>
             <div class="ir">
-              <input id="pg_forn" placeholder="Fornecedor (ou digite CNPJ + buscar)">
-              <input id="pg_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px">
+              <input id="pg_forn" placeholder="Fornecedor (digite ou escolha)" list="forn_list" oninput="onFornInput('pg')">
+              <datalist id="forn_list"></datalist>
+              <input id="pg_cnpj" placeholder="CNPJ (opcional)" style="max-width:160px" onkeydown="if(event.key==='Enter')buscarCNPJPagar()">
               <button class="btn btnsm" onclick="buscarCNPJPagar()">🔎 CNPJ</button>
             </div>
             <div class="ir"><input type="text" id="pg_venc" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this)"><input id="pg_desc" placeholder="Descrição" oninput="autoCat('pg')"></div>
@@ -848,6 +849,10 @@ textarea{resize:vertical;min-height:60px}
                 <input id="cx_parceria" placeholder="Parceria (opcional — ex: Agência Imperatriz)">
                 <input id="cx_comissao" type="number" step="0.1" min="0" max="100" placeholder="Comissão % sobre entradas">
               </div>
+              <div class="ir">
+                <input id="cx_empresa" placeholder="Empresa (ex: Joel, Auricélia)" list="empresas_list">
+                <datalist id="empresas_list"></datalist>
+              </div>
               <button class="btn btnp" onclick="addCaixa()">Criar caixa</button>
               <div style="font-size:11px;color:var(--t3)">A comissão é o % que a empresa paga à parceria sobre tudo que esse caixa recebe. Deixe em branco se o caixa não tem parceria.</div>
             </div>
@@ -938,10 +943,15 @@ textarea{resize:vertical;min-height:60px}
    Papéis: gestor (admin) · operacional · dona · membro
 ════════════════════════════════════════ */
 const KEY='nipihub_fin_v3';
-const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},socios:[],users:[],mem:[],hist:[],fechados:[],orcamentos:{}};
+const DEF={flux:[],receber:[],pagar:[],boletos:[],veiculos:[],ofx:[],caixas:[],contas:[],categorias:[],regrasCat:{},fornecedores:{},socios:[],users:[],mem:[],hist:[],fechados:[],orcamentos:{}};
 let S={...DEF};
 let CU='',CUID='',CD='',CR='',CA=[],CPAGES=null,CCX='',CDIAS=null;  // current user name, id, dept, role, access, custom pages, caixaId, janela de dias
 let CAIXA_FILTER='__all__';            // filtro de caixa selecionado (telas de visão completa)
+let EMPRESA_FILTER='__all__';          // filtro por empresa (Joel / Auricélia / …)
+/* lista de empresas distintas cadastradas nos caixas */
+function empresasCadastradas(){return [...new Set((S.caixas||[]).map(c=>(c.empresa||'').trim()).filter(Boolean))].sort();}
+/* ids dos caixas de uma empresa */
+function caixasDaEmpresa(nome){return (S.caixas||[]).filter(c=>(c.empresa||'').trim()===nome).map(c=>c.id);}
 
 /* ── PAPÉIS ──
    gestor      = administrador (Edson): usuários, equipa, config + tudo
@@ -1011,6 +1021,40 @@ function exigeSessao(){
   if(app)app.style.display='none';
   if(login)login.style.display='flex';
   return false;
+}
+/* ── MEMÓRIA DE FORNECEDORES ──
+   Cada vez que uma conta é lançada com CNPJ, guardamos "CNPJ → dados".
+   Assim o sistema aprende: da próxima vez, digitar o CNPJ (ou parte do nome)
+   já sugere o fornecedor, sem depender da internet. */
+function soDigitos(s){return (s||'').replace(/\D/g,'');}
+function lembraFornecedor(cnpj,nome,extra){
+  const c=soDigitos(cnpj);
+  if(c.length!==14||!nome||!nome.trim())return;
+  if(!S.fornecedores)S.fornecedores={};
+  const antigo=S.fornecedores[c]||{};
+  S.fornecedores[c]={
+    nome:nome.trim(),
+    cidade:(extra&&extra.cidade)||antigo.cidade||'',
+    uf:(extra&&extra.uf)||antigo.uf||'',
+    usos:(antigo.usos||0)+1,
+    t:new Date().toISOString()
+  };
+}
+/* busca na memória por CNPJ (exato) ou por trecho do nome */
+function achaFornecedorPorCNPJ(cnpj){
+  const c=soDigitos(cnpj);if(c.length!==14||!S.fornecedores)return null;
+  const f=S.fornecedores[c];return f?{cnpj:c,...f}:null;
+}
+function buscaFornecedores(termo){
+  if(!S.fornecedores||!termo)return [];
+  const t=termo.trim().toLowerCase();const ct=soDigitos(termo);
+  const res=[];
+  for(const c in S.fornecedores){
+    const f=S.fornecedores[c];
+    if((ct&&c.includes(ct))||f.nome.toLowerCase().includes(t))
+      res.push({cnpj:c,...f});
+  }
+  return res.sort((a,b)=>(b.usos||0)-(a.usos||0)).slice(0,8);
 }
 /* ── UTILS ── */
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -1271,6 +1315,7 @@ const FORMAS=[
   {id:'pix',       l:'⚡ PIX',                     cor:'var(--gr)'},
   {id:'cartao',    l:'💳 Cartão',                  cor:'var(--ment)'},
   {id:'boleto',    l:'📄 Boleto',                  cor:'var(--com)'},
+  {id:'debauto',   l:'🔄 Débito automático',       cor:'var(--peace)'},
   {id:'transf',    l:'🏦 Transferência entre contas',cor:'var(--mkt)'}
 ];
 function formaLabel(id){const f=FORMAS.find(x=>x.id===id);return f?f.l:'';}
@@ -1420,17 +1465,31 @@ function scopedFlux(){
     if(CCX)return aplicaJanela(S.flux.filter(e=>e.caixaId===CCX||e.byId===CUID));
     return aplicaJanela(S.flux.filter(e=>e.byId===CUID));
   }
-  let base;
-  if(CAIXA_FILTER==='__none__')base=S.flux.filter(e=>!e.caixaId);
-  else if(CAIXA_FILTER&&CAIXA_FILTER!=='__all__')base=S.flux.filter(e=>e.caixaId===CAIXA_FILTER);
-  else base=S.flux;
+  let base=S.flux;
+  // 1) filtro por empresa (via caixas daquela empresa)
+  if(EMPRESA_FILTER&&EMPRESA_FILTER!=='__all__'){
+    const ids=caixasDaEmpresa(EMPRESA_FILTER);
+    base=base.filter(e=>ids.includes(e.caixaId));
+  }
+  // 2) filtro por caixa
+  if(CAIXA_FILTER==='__none__')base=base.filter(e=>!e.caixaId);
+  else if(CAIXA_FILTER&&CAIXA_FILTER!=='__all__')base=base.filter(e=>e.caixaId===CAIXA_FILTER);
   return aplicaJanela(base);
 }
 function renderCaixaFilter(containerId){
   const el=document.getElementById(containerId);if(!el)return;
   if(!isFull()){el.innerHTML='';return;}
   const cxs=caixaUsers();
-  let h='<div class="filter-bar"><span style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Filtrar por caixa:</span>';
+  const empresas=empresasCadastradas();
+  let h='';
+  // barra de empresas (só aparece se houver empresa cadastrada nos caixas)
+  if(empresas.length){
+    h+='<div class="filter-bar"><span style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Empresa:</span>';
+    h+=`<button class="caixa-pill ${EMPRESA_FILTER==='__all__'?'on':''}" onclick="setEmpresa('__all__')">Todas</button>`;
+    empresas.forEach(nm=>{h+=`<button class="caixa-pill ${EMPRESA_FILTER===nm?'on':''}" onclick="setEmpresa('${esc(nm).replace(/'/g,"\\'")}')">${esc(nm)}</button>`;});
+    h+='</div>';
+  }
+  h+='<div class="filter-bar"><span style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Filtrar por caixa:</span>';
   h+=`<button class="caixa-pill ${CAIXA_FILTER==='__all__'?'on':''}" onclick="setCaixa('__all__')">Todos os caixas</button>`;
   cxs.forEach(c=>{h+=`<button class="caixa-pill ${CAIXA_FILTER===c.id?'on':''}" onclick="setCaixa('${c.id}')"><span style="width:7px;height:7px;border-radius:50%;background:${c.cor||'var(--t3)'}"></span>${esc(c.nome)}</button>`;});
   h+=`<button class="caixa-pill ${CAIXA_FILTER==='__none__'?'on':''}" onclick="setCaixa('__none__')">Sem caixa</button>`;
@@ -1438,6 +1497,7 @@ function renderCaixaFilter(containerId){
   el.innerHTML=h;
 }
 function setCaixa(id){CAIXA_FILTER=id;renderFluxo();renderDash();}
+function setEmpresa(nm){EMPRESA_FILTER=nm;CAIXA_FILTER='__all__';renderFluxo();renderDash();}
 
 function buildMonthSelect(entries,current){
   const sel=document.getElementById('fx_month');if(!sel)return;
@@ -1749,6 +1809,20 @@ function renderCCList(){const dl=document.getElementById('cc_list');if(dl)dl.inn
 ════════════════════════════════════════ */
 
 /* ── 1. Boleto: extrai valor e vencimento da linha digitável ── */
+/* converte o fator de vencimento em data, tratando o reinício FEBRABAN
+   de 22/02/2025 (quando o fator chegou a 9999 e voltou para 1000). */
+function vencDoFator(fator){
+  const base=Date.UTC(1997,9,7);
+  let d=new Date(base+fator*86400000);
+  // se cair mais de ~100 dias no passado, o fator já passou pela virada: soma 9000
+  if((Date.now()-d.getTime())/86400000 > 100){
+    d=new Date(base+(fator+9000)*86400000);
+  }
+  return d.toISOString().slice(0,10);
+}
+/* nome do banco emissor pelo código de 3 dígitos (os mais comuns) */
+const BANCOS={'001':'Banco do Brasil','033':'Santander','041':'Banrisul','070':'BRB','077':'Banco Inter','104':'Caixa Econômica','208':'BTG Pactual','212':'Banco Original','237':'Bradesco','246':'ABC Brasil','260':'Nubank','290':'PagBank','323':'Mercado Pago','336':'C6 Bank','341':'Itaú','347':'Sudameris','356':'Real','389':'Mercantil','399':'HSBC','422':'Safra','453':'Banco Rural','633':'Rendimento','652':'Itaú Unibanco','745':'Citibank','748':'Sicredi','756':'Sicoob'};
+function bancoPorCodigo(cod){return BANCOS[cod]||'';}
 function parseLinhaDigitavel(raw){
   const s=(raw||'').replace(/\D/g,'');
   // Boleto bancário: 47 dígitos. Convênio/arrecadação: 48 dígitos.
@@ -1760,12 +1834,11 @@ function parseLinhaDigitavel(raw){
     const val=centavos/100;
     let venc='';
     if(fator>0){
-      // base 07/10/1997; a partir de 22/02/2025 o fator reinicia, mas mantemos a base clássica
-      const base=new Date(1997,9,7);
-      base.setDate(base.getDate()+fator);
-      venc=base.toISOString().slice(0,10);
+      venc=vencDoFator(fator);
     }
-    return {ok:true,tipo:'bancario',val:val>0?val:null,venc};
+    // banco emissor (3 primeiros dígitos) — ajuda a identificar o fornecedor
+    const banco=bancoPorCodigo(s.substr(0,3));
+    return {ok:true,tipo:'bancario',val:val>0?val:null,venc,banco};
   }
   if(s.length===48){
     // arrecadação (concessionárias): valor nas posições 4-14
@@ -1886,28 +1959,73 @@ function lerBoletoPagar(){
   if(!r.ok){toast('Não reconheci o boleto. A linha digitável deve ter 47 dígitos (boleto bancário) ou 48 (concessionária).','err');return;}
   if(r.val){const el=document.getElementById('pg_val');if(el)el.value=r.val.toFixed(2);}
   if(r.venc){const el=document.getElementById('pg_venc');if(el)el.value=toBR(r.venc);}
-  let msg='Boleto lido!';
-  if(r.val)msg+=' Valor: '+money(r.val)+'.';else msg+=' (valor não detectado, preencha manualmente).';
+  // fornecedor: a linha digitável NÃO carrega o nome do beneficiário — só dá o banco emissor.
+  // preenchemos com o banco como ponto de partida, sem sobrescrever o que já estiver digitado.
+  // o boleto não traz o nome do fornecedor. Deixamos o campo pronto para
+  // digitar/buscar, e destacamos o campo de CNPJ como próximo passo natural.
+  const fe=document.getElementById('pg_forn');
+  const ce=document.getElementById('pg_cnpj');
+  let msg='✅ Boleto lido!';
+  if(r.val)msg+=' Valor: '+money(r.val)+'.';else msg+=' (valor não detectado — preencha à mão).';
   if(r.venc)msg+=' Vencimento: '+fmt(r.venc)+'.';
+  if(r.banco)msg+=' Banco: '+r.banco+'.';
+  msg+='\n\n👉 O nome do fornecedor não vem no boleto. Para completar:\n• digite o CNPJ ao lado e toque em 🔎 CNPJ, ou\n• comece a digitar o nome (fornecedores já usados aparecem na lista).';
   alert(msg);
+  // foca o CNPJ para o próximo passo; se não houver, foca o fornecedor
+  if(ce&&!ce.value.trim())ce.focus();else if(fe)fe.focus();
 }
 async function buscarCNPJPagar(){
   const c=v('pg_cnpj');if(!c.trim()){toast('Digite o CNPJ.','err');return;}
+  // 1) memória: se já conhecemos esse CNPJ, responde na hora (sem internet)
+  const mem=achaFornecedorPorCNPJ(c);
+  if(mem){
+    document.getElementById('pg_forn').value=mem.nome;
+    document.getElementById('pg_cnpj').value=fmtCNPJ(mem.cnpj);
+    toast('Fornecedor reconhecido da memória.','ok');
+    return;
+  }
+  // 2) internet
   const btn=event&&event.target;if(btn)btn.textContent='...';
   const r=await buscarCNPJ(c);
   if(btn)btn.textContent='🔎 CNPJ';
   if(!r.ok){toast(r.erro||'CNPJ não encontrado.','err');return;}
   document.getElementById('pg_forn').value=r.nome;
   document.getElementById('pg_cnpj').value=fmtCNPJ(r.cnpj);
+  lembraFornecedor(r.cnpj,r.nome,{cidade:r.cidade,uf:r.uf});save();
 }
 async function buscarCNPJReceber(){
   const c=v('rc_cnpj');if(!c.trim()){toast('Digite o CNPJ.','err');return;}
+  const mem=achaFornecedorPorCNPJ(c);
+  if(mem){
+    document.getElementById('rc_cli').value=mem.nome;
+    document.getElementById('rc_cnpj').value=fmtCNPJ(mem.cnpj);
+    toast('Cliente reconhecido da memória.','ok');
+    return;
+  }
   const btn=event&&event.target;if(btn)btn.textContent='...';
   const r=await buscarCNPJ(c);
   if(btn)btn.textContent='🔎 CNPJ';
   if(!r.ok){toast(r.erro||'CNPJ não encontrado.','err');return;}
   document.getElementById('rc_cli').value=r.nome;
   document.getElementById('rc_cnpj').value=fmtCNPJ(r.cnpj);
+  lembraFornecedor(r.cnpj,r.nome,{cidade:r.cidade,uf:r.uf});save();
+}
+/* preenche o datalist de fornecedores conhecidos (memória) */
+function renderFornList(){
+  const dl=document.getElementById('forn_list');if(!dl)return;
+  const nomes=S.fornecedores?Object.values(S.fornecedores).sort((a,b)=>(b.usos||0)-(a.usos||0)).map(f=>f.nome):[];
+  dl.innerHTML=[...new Set(nomes)].map(n=>`<option value="${esc(n)}">`).join('');
+}
+/* ao digitar/escolher um fornecedor conhecido, completa o CNPJ sozinho */
+function onFornInput(prefixo){
+  const nome=v(prefixo+(prefixo==='rc'?'_cli':'_forn'));
+  if(!nome||nome.length<3||!S.fornecedores)return;
+  const alvo=nome.trim().toLowerCase();
+  const achado=Object.entries(S.fornecedores).find(([c,f])=>f.nome.toLowerCase()===alvo);
+  if(achado){
+    const campoCnpj=document.getElementById(prefixo+'_cnpj');
+    if(campoCnpj&&!campoCnpj.value.trim())campoCnpj.value=fmtCNPJ(achado[0]);
+  }
 }
 /* sugere categoria ao digitar a descrição (sem sobrescrever escolha manual) */
 function autoCat(prefixo){
@@ -1959,15 +2077,30 @@ function addReceber(){
     S.receber.push({id:uid(),cli,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,autoRecorr,freq:recorr!=='unica'?recorr:null,by:CU,t:new Date().toISOString()});
   }
   if(cat&&desc)aprdCategoria(desc,cat); // aprende categoria
+  lembraFornecedor(v('rc_cnpj'),cli); // aprende o cliente (se houver CNPJ)
   log('Adicionou conta a receber: '+cli+' ('+money(val)+(n>1?' x'+n:'')+')');save();
   clr('rc_cli','rc_cnpj','rc_venc','rc_desc','rc_val','rc_cc','rc_juros','rc_multa');renderReceber();
 }
+/* pergunta a data em que o dinheiro realmente entrou/saiu (padrão: hoje).
+   Retorna a data ISO, ou null se o usuário cancelar. */
+function pedeDataBaixa(rotulo){
+  const hoje=new Date().toISOString().slice(0,10);
+  const resp=prompt(rotulo+'\n\nData (dd/mm/aaaa) — deixe como está para usar hoje:',hojeBR());
+  if(resp===null)return null;            // cancelou
+  const t=resp.trim();
+  if(!t)return hoje;
+  const iso=parseBR(t);
+  if(!iso){toast('Data inválida. Use dd/mm/aaaa.','err');return undefined;} // undefined = erro
+  return iso;
+}
 function receberConta(id){
   const c=S.receber.find(x=>x.id===id);if(!c)return;
-  if(bloqueiaMesFechado(new Date().toISOString().slice(0,10)))return;
+  const dBaixa=pedeDataBaixa('Recebimento de: '+(c.cli||c.desc||''));
+  if(dBaixa===null||dBaixa===undefined)return;
+  if(bloqueiaMesFechado(dBaixa))return;
   const acr=acrescimo(c);const total=c.val+acr;
-  c.status='recebido';c.recebidoEm=new Date().toISOString().slice(0,10);c.valRecebido=total;
-  S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Recebimentos',cc:c.cc||'',tipo:'entrada',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
+  c.status='recebido';c.recebidoEm=dBaixa;c.valRecebido=total;
+  S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Recebimentos',cc:c.cc||'',forma:c.forma||'',tipo:'entrada',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
   log('Recebeu conta: '+c.cli+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderReceber();renderDash();renderFluxo();renderPagas();
 }
 function delReceber(id){const c=S.receber.find(x=>x.id===id);if(!c)return;removerComDesfazer('receber',id,renderReceber,'Conta a receber de '+(c.cli||'—'));}
@@ -1984,6 +2117,7 @@ function cobrar(id){
 }
 function renderReceber(){
   const mg=document.getElementById('rc_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
+  renderFornList();
   const sel=document.getElementById('rc_cat');if(sel){const cur=sel.value;sel.innerHTML='<option value="">Categoria…</option>'+CAT_ENTRADA_().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');sel.value=cur||'';}
   renderCCList();
   const abertos=S.receber.filter(c=>c.status==='aberto');
@@ -2020,20 +2154,24 @@ function addPagar(){
     S.pagar.push({id:uid(),forn,venc:vdt,desc:desc+(n>1?` (${i+1}/${n})`:''),cat,cc,val,juros,multa,status:'aberto',grupo,autoRecorr,freq:recorr!=='unica'?recorr:null,by:CU,t:new Date().toISOString()});
   }
   if(cat&&desc)aprdCategoria(desc,cat); // aprende categoria
+  lembraFornecedor(v('pg_cnpj'),forn); // aprende o fornecedor (se houver CNPJ)
   log('Adicionou conta a pagar: '+forn+' ('+money(val)+(n>1?' x'+n:'')+')');save();
   clr('pg_forn','pg_cnpj','pg_boleto','pg_venc','pg_desc','pg_val','pg_cc','pg_juros','pg_multa');renderPagar();
 }
 function pagarConta(id){
   const c=S.pagar.find(x=>x.id===id);if(!c)return;
-  if(bloqueiaMesFechado(new Date().toISOString().slice(0,10)))return;
+  const dBaixa=pedeDataBaixa('Pagamento de: '+(c.forn||c.desc||''));
+  if(dBaixa===null||dBaixa===undefined)return;
+  if(bloqueiaMesFechado(dBaixa))return;
   const acr=acrescimo(c);const total=c.val+acr;
-  c.status='pago';c.pagoEm=new Date().toISOString().slice(0,10);c.valPago=total;
-  S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Pagamentos',cc:c.cc||'',tipo:'saida',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
+  c.status='pago';c.pagoEm=dBaixa;c.valPago=total;
+  S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Pagamentos',cc:c.cc||'',forma:c.forma||'',tipo:'saida',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
   log('Pagou conta: '+c.forn+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderPagar();renderDash();renderFluxo();renderPagas();
 }
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;removerComDesfazer('pagar',id,renderPagar,'Conta a pagar de '+(c.forn||'—'));}
 function renderPagar(){
   const mg=document.getElementById('pg_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
+  renderFornList();
   const sel=document.getElementById('pg_cat');if(sel){const cur=sel.value;sel.innerHTML='<option value="">Categoria…</option>'+CAT_SAIDA_().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');sel.value=cur||'';}
   renderCCList();
   const abertos=S.pagar.filter(c=>c.status==='aberto');
@@ -2101,9 +2239,10 @@ function addCaixa(){
   const cor=v('cx_cor')||'var(--mkt)';
   const parceria=v('cx_parceria').trim();
   const comissao=Math.max(0,Math.min(100,parseFloat(v('cx_comissao'))||0));
-  S.caixas.push({id:'cx_'+uid(),nome,cor,parceria,comissao,t:new Date().toISOString()});
+  const empresa=v('cx_empresa').trim();
+  S.caixas.push({id:'cx_'+uid(),nome,cor,parceria,comissao,empresa,t:new Date().toISOString()});
   log('Gestor criou caixa: '+nome+(comissao?' (comissão '+comissao+'% · '+(parceria||'parceria')+')':''));save();
-  clr('cx_nome','cx_parceria','cx_comissao');renderCaixaList();renderCaixaAssignSelect();renderUsers();
+  clr('cx_nome','cx_parceria','cx_comissao','cx_empresa');renderCaixaList();renderCaixaAssignSelect();renderUsers();
 }
 function delCaixa(id){
   const c=S.caixas.find(x=>x.id===id);if(!c)return;
@@ -2126,10 +2265,11 @@ function renderCaixaList(){
     return`<div class="row" style="flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
         <span style="width:12px;height:12px;border-radius:50%;background:${c.cor};flex-shrink:0"></span>
-        <div style="min-width:0"><input value="${esc(c.nome)}" onchange="renameCaixa('${c.id}',this.value)" style="font-weight:600;max-width:200px"><div class="rsub">${atrib.length?'Atribuído a: '+esc(atrib.join(', ')):'Sem usuário atribuído'} · ${nLanc} lançamento(s)</div></div>
+        <div style="min-width:0"><input value="${esc(c.nome)}" onchange="renameCaixa('${c.id}',this.value)" style="font-weight:600;max-width:200px"><div class="rsub">${c.empresa?'🏢 '+esc(c.empresa)+' · ':''}${atrib.length?'Atribuído a: '+esc(atrib.join(', ')):'Sem usuário atribuído'} · ${nLanc} lançamento(s)</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <input value="${esc(c.parceria||'')}" onchange="setCaixaParceria('${c.id}',this.value)" placeholder="Parceria" style="max-width:140px;font-size:12px;padding:4px 8px">
+        <input value="${esc(c.empresa||'')}" onchange="setCaixaEmpresa('${c.id}',this.value)" placeholder="Empresa" list="empresas_list" style="max-width:120px;font-size:12px;padding:4px 8px">
+        <input value="${esc(c.parceria||'')}" onchange="setCaixaParceria('${c.id}',this.value)" placeholder="Parceria" style="max-width:130px;font-size:12px;padding:4px 8px">
         <input type="number" step="0.1" min="0" max="100" value="${com||''}" onchange="setCaixaComissao('${c.id}',this.value)" placeholder="%" title="Comissão % sobre entradas" style="max-width:70px;font-size:12px;padding:4px 8px">
         <span style="font-size:12px;color:var(--t3)">%</span>
         <button class="btn btnsm" style="border-color:#F09595;color:var(--dngt)" onclick="delCaixa('${c.id}')">Remover</button>
@@ -2137,6 +2277,8 @@ function renderCaixaList(){
     </div>`;
   }).join('');
 }
+function setCaixaEmpresa(id,val){const c=S.caixas.find(x=>x.id===id);if(!c)return;c.empresa=val.trim();log('Definiu empresa do caixa '+c.nome+': '+(c.empresa||'—'));save();renderCaixaList();atualizaDatalistEmpresas();}
+function atualizaDatalistEmpresas(){const dl=document.getElementById('empresas_list');if(dl)dl.innerHTML=empresasCadastradas().map(n=>`<option value="${esc(n)}">`).join('');}
 function setCaixaParceria(id,val){const c=S.caixas.find(x=>x.id===id);if(!c)return;c.parceria=val.trim();save();renderCaixaList();}
 function setCaixaComissao(id,val){const c=S.caixas.find(x=>x.id===id);if(!c)return;c.comissao=Math.max(0,Math.min(100,parseFloat(val)||0));log('Ajustou comissão do caixa '+c.nome+': '+c.comissao+'%');save();renderCaixaList();renderComissoes&&renderComissoes();}
 /* ── COMISSÕES DE PARCERIA ── */
@@ -2794,7 +2936,8 @@ function seedCategorias(){
     ['RECEBIMENTO DE PIX','var(--nipi)'],
     ['Venda de ativo fixo','var(--ment)'],
     ['Obtenção de empréstimo','var(--mkt)'],
-    ['Aporte de capital','var(--mkt)']
+    ['Aporte de capital','var(--mkt)'],
+    ['Devolução de Mercadoria','var(--ment)']
   ];
   const saida=[
     ['Custos produto vendido','var(--peace)'],
@@ -2826,7 +2969,12 @@ function seedCategorias(){
     ['Pagamento de empréstimo','var(--mkt)'],
     ['Retirada de capital','var(--mkt)'],
     ['EMPRESTIMO BANCARIO','var(--mkt)'],
-    ['FINANCIAMENTO','var(--mkt)']
+    ['FINANCIAMENTO','var(--mkt)'],
+    ['Seguro Empresa','var(--gr)'],
+    ['Pró-Labore','var(--gr)'],
+    ['Seguro Carga','var(--gr)'],
+    ['Taxas Processuais','var(--com)'],
+    ['Seguro Bancário','var(--com)']
   ];
   const mk=(arr,tipo)=>arr.map(([nome,cor])=>({id:'cat_'+uid(),nome,tipo,cor}));
   return [...mk(entrada,'entrada'),...mk(saida,'saida')];
@@ -3901,7 +4049,7 @@ const CORE_DOC   = ()=>doc(FB_DB,'auricelia','core');
 const LEGADO_DOC = ()=>doc(FB_DB,'auricelia','dados'); // documento antigo (migração automática)
 const COLS = { flux:'auricelia_flux', receber:'auricelia_receber', pagar:'auricelia_pagar',
                boletos:'auricelia_boletos', hist:'auricelia_hist' };
-const CORE_KEYS = ['users','caixas','contas','categorias','socios','veiculos','ofx','regrasCat','orcamentos','fechados','mem'];
+const CORE_KEYS = ['users','caixas','contas','categorias','socios','veiculos','ofx','regrasCat','fornecedores','orcamentos','fechados','mem'];
 
 /* espelho do que sabemos estar na nuvem, para gravar só as diferenças */
 let MIRROR = {core:'', flux:{}, receber:{}, pagar:{}, boletos:{}, hist:{}};
@@ -4015,6 +4163,7 @@ function normalizaListas(){
   if(!Array.isArray(S.fechados))S.fechados=[];
   if(!S.orcamentos||typeof S.orcamentos!=='object')S.orcamentos={};
   if(!S.regrasCat||typeof S.regrasCat!=='object')S.regrasCat={};
+  if(!S.fornecedores||typeof S.fornecedores!=='object')S.fornecedores={};
   // todo item precisa de id próprio (vira o nome do documento na nuvem)
   Object.keys(COLS).forEach(k=>S[k].forEach(i=>{if(!i.id)i.id=uid();}));
 }
