@@ -34,7 +34,7 @@
   --r:12px;--rs:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:radial-gradient(circle at 12% 8%, rgba(232,116,110,.05), transparent 42%),radial-gradient(circle at 88% 95%, rgba(122,165,232,.06), transparent 45%),var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;background:radial-gradient(circle at 12% 8%, rgba(232,116,110,.05), transparent 42%),radial-gradient(circle at 88% 95%, rgba(122,165,232,.06), transparent 45%),var(--bg);color:var(--text);min-height:100vh}
 h1,h2,h3,.serif{font-family:'DM Serif Display',serif;font-weight:400}
 .mono{font-variant-numeric:tabular-nums}
 
@@ -143,8 +143,17 @@ h1,h2,h3,.serif{font-family:'DM Serif Display',serif;font-weight:400}
 input,select,textarea{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--rs);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border .12s}
 input::placeholder,textarea::placeholder{color:var(--t3)}
 select option{background:var(--surface);color:var(--text)}
-input:focus,select:focus,textarea:focus{border-color:var(--pos)}
-input:focus,select:focus,textarea:focus{border-color:var(--text)}
+/* foco por teclado: anel visível (quem lança o dia inteiro navega por Tab) */
+input:focus,select:focus,textarea:focus{
+  border-color:var(--nipi);
+  box-shadow:0 0 0 3px rgba(232,116,110,.28);
+  outline:none;
+}
+.btn:focus-visible,.tab:focus-visible,.caixa-pill:focus-visible,.tbtn:focus-visible,
+.profile:focus-visible,.edit-x:focus-visible,a:focus-visible,[role=button]:focus-visible{
+  outline:2px solid var(--nipi);
+  outline-offset:2px;
+}
 textarea{resize:vertical;min-height:60px}
 .ir{display:flex;gap:7px;margin-bottom:7px;flex-wrap:wrap}
 .ir>*{flex:1;min-width:120px}
@@ -266,6 +275,17 @@ textarea{resize:vertical;min-height:60px}
 .toast.info{border-left:3px solid var(--gr)}
 @keyframes toastIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.97)}}
+
+
+/* respeita a preferência de menos animação (acessibilidade) */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+}
 
 </style>
 </head>
@@ -673,7 +693,7 @@ textarea{resize:vertical;min-height:60px}
 
       <!-- DUPLICATAS -->
       <div id="page-duplicatas" class="page">
-        <div class="ptitle">Duplicatas</div>
+        <div class="ptitle">Duplicadas</div>
         <div class="psub">Com várias pessoas lançando, a mesma entrada ou saída às vezes é registrada duas vezes. Aqui o sistema agrupa os prováveis duplicados — e você também pode marcar manualmente os que ele não pegou.</div>
         <div class="filter-bar">
           <button class="caixa-pill on" id="dup_tab_auto" onclick="dupModo('auto')">🔎 Detectadas pelo sistema</button>
@@ -686,7 +706,7 @@ textarea{resize:vertical;min-height:60px}
             <option value="ano">Ano</option>
             <option value="tudo">Tudo</option>
           </select>
-          <select id="dup_rigor" onchange="renderDuplicatas()" style="width:auto" title="O que conta como provável duplicata">
+          <select id="dup_rigor" onchange="renderDuplicatas()" style="width:auto" title="O que conta como provável duplicada">
             <option value="normal">Rigor normal (valor + data próxima + descrição)</option>
             <option value="rigido">Mais rígido (valor + mesma data)</option>
             <option value="frouxo">Mais amplo (valor + descrição)</option>
@@ -696,7 +716,7 @@ textarea{resize:vertical;min-height:60px}
         <!-- modo automático -->
         <div id="dupAuto">
           <div id="dupResumo" style="margin-bottom:12px"></div>
-          <div id="dupGrupos"><div class="empty">Escolha um período para procurar duplicatas.</div></div>
+          <div id="dupGrupos"><div class="empty">Escolha um período para procurar duplicadas.</div></div>
         </div>
         <!-- modo manual: fluxo completo com seleção -->
         <div id="dupManual" style="display:none">
@@ -943,6 +963,28 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- MODAL EDITAR LANÇAMENTO -->
+<div class="modal-back" id="baixaModal">
+  <div class="edit-modal">
+    <div class="edit-head"><h3 id="bx_titulo">Dar baixa</h3><button class="edit-x" onclick="fecharBaixa()">✕</button></div>
+    <div class="edit-body">
+      <div class="efull" id="bx_info" style="font-size:12.5px;color:var(--t2);background:var(--surface2);border-radius:8px;padding:9px 11px"></div>
+      <div><label class="elbl" id="bx_data_lbl">Data do pagamento</label><input type="text" id="bx_d" class="num" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" oninput="maskDate(this);recalcBaixa()"></div>
+      <div><label class="elbl" id="bx_forma_lbl">Forma de pagamento</label><select id="bx_forma"></select></div>
+      <div><label class="elbl">Valor original (R$)</label><input type="number" id="bx_val" step="0.01" min="0" readonly style="opacity:.75"></div>
+      <div><label class="elbl">Juros + multa (R$)</label><input type="number" id="bx_juros" step="0.01" min="0" oninput="recalcBaixa()"></div>
+      <div class="efull" id="bx_jurosInfo" style="font-size:11.5px;color:var(--t3);margin-top:-4px"></div>
+      <div class="efull" style="background:var(--surface2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Total</span>
+        <strong id="bx_total" style="font-size:20px">R$ 0,00</strong>
+      </div>
+    </div>
+    <div class="edit-foot">
+      <button class="btn" onclick="fecharBaixa()">Cancelar</button>
+      <button class="btn btnp" id="bx_confirmar" onclick="confirmarBaixa()">Confirmar pagamento</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-back" id="editModal">
   <div class="edit-modal">
     <div class="edit-head"><h3>Editar lançamento</h3><button class="edit-x" onclick="closeEditLanc()">✕</button></div>
@@ -971,6 +1013,11 @@ textarea{resize:vertical;min-height:60px}
 
 
 <!-- Módulo (carrega por último): Firebase, autenticação, sincronização e arranque -->
+
+
+
+
+
 <script>
 /* ══════════════════════════════════════════════════════════
    Auricélia Transportes · Central Financeira
@@ -1284,7 +1331,7 @@ const NAV=[
   {id:'comissoes',l:'Comissão por Caixa',dot:'var(--com)',sec:''},
   {id:'concil',l:'Conciliação OFX',dot:'var(--com)',sec:''},
   {id:'relatorios',l:'Relatórios',dot:'var(--text)',sec:''},
-  {id:'duplicatas',l:'Duplicatas',dot:'var(--com)',sec:''},
+  {id:'duplicatas',l:'Duplicadas',dot:'var(--com)',sec:''},
   {id:'socios',l:'Movimentações Pessoais',dot:'var(--mkt)',sec:''},
   {id:'equipa',l:'Equipa',ico:'◷',sec:'Sistema'},
   {id:'categorias',l:'Categorias',ico:'🏷',sec:'Gestor'},
@@ -1827,12 +1874,21 @@ function renderDashChart(all,cm){
 /* ── helpers compartilhados de contas ── */
 function avancaDataConta(iso,i,freq){const base=new Date(iso+'T12:00:00');const dt=new Date(base);if(freq==='semanal')dt.setDate(base.getDate()+i*7);else dt.setMonth(base.getMonth()+i);return dt.toISOString().slice(0,10);}
 /* calcula acréscimo de juros (ao mês, pro rata) + multa para conta vencida */
-function acrescimo(c){
-  const d=days(c.venc);if(d>=0)return 0;
-  const atraso=Math.abs(d);
-  const multa=(c.multa||0)/100*c.val;
-  const juros=(c.juros||0)/100*c.val*(atraso/30); // pró-rata mensal
+function acrescimo(c){return acrescimoEm(c,new Date().toISOString().slice(0,10));}
+/* juros + multa calculados até UMA DATA específica (a data em que a conta foi de fato paga/recebida).
+   É o que permite pagar uma conta hoje e registrar o juros do atraso real. */
+function acrescimoEm(c,dataISO){
+  if(!c||!dataISO)return 0;
+  const venc=new Date(c.venc+'T12:00:00'), dt=new Date(dataISO+'T12:00:00');
+  const atraso=Math.round((dt-venc)/86400000);
+  if(atraso<=0)return 0;                          // pago em dia ou adiantado: sem acréscimo
+  const multa=(c.multa||0)/100*c.val;             // multa fixa por atraso
+  const juros=(c.juros||0)/100*c.val*(atraso/30); // juros pró-rata mensal
   return multa+juros;
+}
+function diasAtraso(c,dataISO){
+  const venc=new Date(c.venc+'T12:00:00'), dt=new Date((dataISO||new Date().toISOString().slice(0,10))+'T12:00:00');
+  return Math.round((dt-venc)/86400000);
 }
 function valorAtualizado(c){return c.val+acrescimo(c);}
 /* lista de centros de custo já usados (para o datalist) */
@@ -2124,26 +2180,118 @@ function addReceber(){
 }
 /* pergunta a data em que o dinheiro realmente entrou/saiu (padrão: hoje).
    Retorna a data ISO, ou null se o usuário cancelar. */
-function pedeDataBaixa(rotulo){
-  const hoje=new Date().toISOString().slice(0,10);
-  const resp=prompt(rotulo+'\n\nData (dd/mm/aaaa) — deixe como está para usar hoje:',hojeBR());
-  if(resp===null)return null;            // cancelou
-  const t=resp.trim();
-  if(!t)return hoje;
-  const iso=parseBR(t);
-  if(!iso){toast('Data inválida. Use dd/mm/aaaa.','err');return undefined;} // undefined = erro
-  return iso;
+/* ══════════════════════════════════════════════════════════
+   BAIXA DE CONTA — data, forma de pagamento e juros efetivos
+   Uma conta vencida só é paga quando entra saldo; nesse dia o juros
+   é maior. Por isso a baixa pergunta a data real, sugere o juros
+   calculado até ela, e deixa você ajustar o valor efetivamente cobrado.
+   ══════════════════════════════════════════════════════════ */
+let BX={tipo:null,id:null,sug:0};
+
+function abrirBaixa(tipo,id){
+  const c=(tipo==='pagar'?S.pagar:S.receber).find(x=>x.id===id);
+  if(!c)return;
+  BX={tipo,id,sug:0};
+  const ehPagar=tipo==='pagar';
+  const quem=ehPagar?(c.forn||''):(c.cli||'');
+  document.getElementById('bx_titulo').textContent=ehPagar?'Pagar conta':'Receber conta';
+  document.getElementById('bx_data_lbl').textContent=ehPagar?'Data do pagamento':'Data do recebimento';
+  document.getElementById('bx_forma_lbl').textContent=ehPagar?'Forma de pagamento':'Forma de recebimento';
+  document.getElementById('bx_confirmar').textContent=ehPagar?'Confirmar pagamento':'Confirmar recebimento';
+  const atraso=diasAtraso(c,new Date().toISOString().slice(0,10));
+  document.getElementById('bx_info').innerHTML=
+    `<strong>${esc(quem)}</strong>${c.desc?' · '+esc(c.desc):''}<br>`+
+    `Vencimento: ${fmt(c.venc)}`+
+    (atraso>0?` · <span style="color:var(--dngt)">vencida há ${atraso} dia(s)</span>`
+             :(atraso===0?' · <span style="color:var(--warnt)">vence hoje</span>'
+                        :` · <span style="color:var(--okt)">a vencer em ${Math.abs(atraso)} dia(s)</span>`))+
+    ((c.juros||c.multa)?`<br>Taxas cadastradas: ${c.juros||0}% juros ao mês${c.multa?' + '+c.multa+'% multa':''}`:'<br>Sem taxas cadastradas — informe o juros manualmente se houver.');
+  document.getElementById('bx_d').value=hojeBR();
+  document.getElementById('bx_val').value=c.val.toFixed(2);
+  preencheFormas('bx_forma',ehPagar?'saida':'entrada',c.forma||'');
+  // sugestão inicial de juros para hoje
+  const sug=acrescimoEm(c,new Date().toISOString().slice(0,10));
+  BX.sug=+sug.toFixed(2);
+  document.getElementById('bx_juros').value=BX.sug>0?BX.sug.toFixed(2):'';
+  atualizaTotalBaixa();
+  document.getElementById('baixaModal').classList.add('open');
 }
-function receberConta(id){
-  const c=S.receber.find(x=>x.id===id);if(!c)return;
-  const dBaixa=pedeDataBaixa('Recebimento de: '+(c.cli||c.desc||''));
-  if(dBaixa===null||dBaixa===undefined)return;
-  if(bloqueiaMesFechado(dBaixa))return;
-  const acr=acrescimo(c);const total=c.val+acr;
-  c.status='recebido';c.recebidoEm=dBaixa;c.valRecebido=total;
-  S.flux.push({id:uid(),d:c.recebidoEm,desc:'Recebido: '+c.desc+' ('+c.cli+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Recebimentos',cc:c.cc||'',forma:c.forma||'',tipo:'entrada',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
-  log('Recebeu conta: '+c.cli+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderReceber();renderDash();renderFluxo();renderPagas();
+function fecharBaixa(){BX={tipo:null,id:null,sug:0};document.getElementById('baixaModal').classList.remove('open');}
+
+/* recalcula a sugestão de juros quando a data muda.
+   Se você já ajustou o juros à mão, o valor NÃO é sobrescrito — só oferecemos a sugestão. */
+function recalcBaixa(){
+  if(!BX.id)return;
+  const c=(BX.tipo==='pagar'?S.pagar:S.receber).find(x=>x.id===BX.id);
+  if(!c)return;
+  const dISO=parseBR(v('bx_d'));
+  const info=document.getElementById('bx_jurosInfo');
+  if(!dISO){if(info)info.textContent='';atualizaTotalBaixa();return;}
+  const novaSug=+acrescimoEm(c,dISO).toFixed(2);
+  const campo=document.getElementById('bx_juros');
+  const atual=parseFloat(campo.value)||0;
+  // se o campo ainda tem a sugestão anterior (ou está vazio), atualiza sozinho
+  if(Math.abs(atual-BX.sug)<0.005||!campo.value.trim()){
+    campo.value=novaSug>0?novaSug.toFixed(2):'';
+  }
+  BX.sug=novaSug;
+  const atraso=diasAtraso(c,dISO);
+  const depois=parseFloat(campo.value)||0;
+  let txt='';
+  if(atraso>0){
+    txt=`${atraso} dia(s) de atraso nesta data · sugestão calculada: ${money(novaSug)}`;
+    if(Math.abs(depois-novaSug)>=0.005)
+      txt+=` · <a href="#" onclick="usarSugestaoJuros();return false" style="color:var(--gr)">usar sugestão</a>`;
+  }else if(atraso===0){txt='Pago no dia do vencimento — sem acréscimo.';}
+  else{txt=`Antecipado em ${Math.abs(atraso)} dia(s) — sem acréscimo.`;}
+  if(info)info.innerHTML=txt;
+  atualizaTotalBaixa();
 }
+function usarSugestaoJuros(){
+  const campo=document.getElementById('bx_juros');
+  campo.value=BX.sug>0?BX.sug.toFixed(2):'';
+  recalcBaixa();
+}
+function atualizaTotalBaixa(){
+  const val=parseFloat(v('bx_val'))||0;
+  const jur=parseFloat(v('bx_juros'))||0;
+  const el=document.getElementById('bx_total');
+  if(el){
+    el.textContent=money(val+jur);
+    el.style.color=jur>0?'var(--warnt)':'var(--t1)';
+  }
+}
+function confirmarBaixa(){
+  if(!BX.id)return;
+  const ehPagar=BX.tipo==='pagar';
+  const lista=ehPagar?S.pagar:S.receber;
+  const c=lista.find(x=>x.id===BX.id);
+  if(!c){fecharBaixa();return;}
+  const dISO=parseBR(v('bx_d'));
+  if(!dISO){toast('Data inválida. Use dd/mm/aaaa.','err');return;}
+  if(bloqueiaMesFechado(dISO))return;
+  const jur=Math.max(0,parseFloat(v('bx_juros'))||0);
+  const forma=v('bx_forma');
+  const total=c.val+jur;
+  c.status=ehPagar?'pago':'recebido';
+  c[ehPagar?'pagoEm':'recebidoEm']=dISO;
+  c[ehPagar?'valPago':'valRecebido']=total;
+  c.jurosPago=jur;          // guarda quanto de juros foi efetivamente cobrado
+  c.formaBaixa=forma;       // e por qual meio o dinheiro saiu/entrou
+  const quem=ehPagar?(c.forn||''):(c.cli||'');
+  S.flux.push({
+    id:uid(),d:dISO,
+    desc:(ehPagar?'Pago: ':'Recebido: ')+c.desc+' ('+quem+')'+(jur>0?' [+juros/multa '+money(jur)+']':''),
+    cat:c.cat||(ehPagar?'Pagamentos':'Recebimentos'),cc:c.cc||'',forma,
+    tipo:ehPagar?'saida':'entrada',val:total,
+    by:CU,byId:CUID,t:new Date().toISOString()
+  });
+  log((ehPagar?'Pagou':'Recebeu')+' conta: '+quem+' '+money(total)+(jur>0?' (juros '+money(jur)+')':'')+(forma?' · '+formaLabel(forma).replace(/^\S+\s/,''):''));
+  save();fecharBaixa();
+  renderPagar();renderReceber();renderDash();renderFluxo();renderPagas();
+  toast((ehPagar?'Pagamento':'Recebimento')+' registrado: '+money(total)+(jur>0?' (com '+money(jur)+' de juros)':''),'ok');
+}
+function receberConta(id){abrirBaixa('receber',id);}
 function delReceber(id){const c=S.receber.find(x=>x.id===id);if(!c)return;removerComDesfazer('receber',id,renderReceber,'Conta a receber de '+(c.cli||'—'));}
 /* gera mensagem de cobrança pronta para copiar */
 function cobrar(id){
@@ -2199,16 +2347,7 @@ function addPagar(){
   log('Adicionou conta a pagar: '+forn+' ('+money(val)+(n>1?' x'+n:'')+')');save();
   clr('pg_forn','pg_cnpj','pg_boleto','pg_venc','pg_desc','pg_val','pg_cc','pg_juros','pg_multa');renderPagar();
 }
-function pagarConta(id){
-  const c=S.pagar.find(x=>x.id===id);if(!c)return;
-  const dBaixa=pedeDataBaixa('Pagamento de: '+(c.forn||c.desc||''));
-  if(dBaixa===null||dBaixa===undefined)return;
-  if(bloqueiaMesFechado(dBaixa))return;
-  const acr=acrescimo(c);const total=c.val+acr;
-  c.status='pago';c.pagoEm=dBaixa;c.valPago=total;
-  S.flux.push({id:uid(),d:c.pagoEm,desc:'Pago: '+c.desc+' ('+c.forn+')'+(acr>0?' [+juros/multa]':''),cat:c.cat||'Pagamentos',cc:c.cc||'',forma:c.forma||'',tipo:'saida',val:total,by:CU,byId:CUID,t:new Date().toISOString()});
-  log('Pagou conta: '+c.forn+(acr>0?' (com acréscimo '+money(acr)+')':''));save();renderPagar();renderDash();renderFluxo();renderPagas();
-}
+function pagarConta(id){abrirBaixa('pagar',id);}
 function delPagar(id){const c=S.pagar.find(x=>x.id===id);if(!c)return;removerComDesfazer('pagar',id,renderPagar,'Conta a pagar de '+(c.forn||'—'));}
 function renderPagar(){
   const mg=document.getElementById('pg_meses');if(mg&&!mg.children.length)mg.innerHTML=opcoesMeses();
@@ -4039,7 +4178,7 @@ function renderAll(){
 }
 
 /* ══════════════════════════════════════════════════════════
-   DUPLICATAS — o financeiro revisa e junta lançamentos repetidos
+   DUPLICADAS — o financeiro revisa e junta lançamentos repetidos
    ══════════════════════════════════════════════════════════ */
 
 /* normaliza a descrição para comparar: minúsculas, sem acento, sem pontuação */
@@ -4059,7 +4198,7 @@ function simDesc(a,b){
 function diffDias(d1,d2){
   return Math.abs((new Date(d1+'T00:00:00')-new Date(d2+'T00:00:00'))/86400000);
 }
-/* dois lançamentos são prováveis duplicatas? (conforme o rigor escolhido) */
+/* dois lançamentos são prováveis duplicadas? (conforme o rigor escolhido) */
 function saoDuplicatas(a,b,rigor){
   if(a.id===b.id)return false;
   if(a.tipo!==b.tipo)return false;                 // entrada só casa com entrada
@@ -4068,7 +4207,7 @@ function saoDuplicatas(a,b,rigor){
   if(rigor==='frouxo')  return simDesc(a.desc,b.desc)>=0.5;                 // + descrição parecida
   /* normal */          return diffDias(a.d,b.d)<=2 && simDesc(a.desc,b.desc)>=0.5; // data próxima + descrição
 }
-/* agrupa os lançamentos do período em conjuntos de prováveis duplicatas */
+/* agrupa os lançamentos do período em conjuntos de prováveis duplicadas */
 function acharGruposDuplicados(per,rigor){
   let ls=aplicaJanela(S.flux).filter(e=>e.tipo!=='transf'); // transferências não entram
   ls=filtraPeriodo(ls,per,'d');
@@ -4109,14 +4248,14 @@ function renderDuplicatas(){
   const resumo=document.getElementById('dupResumo');
   if(!grupos.length){
     if(resumo)resumo.innerHTML='';
-    wrap.innerHTML='<div class="empty-rich"><div style="font-size:30px">✅</div><div style="font-weight:600">Nenhuma duplicata provável no período</div><div style="font-size:12px;color:var(--t3);margin-top:4px">Se você suspeita de repetições, tente o rigor "Mais amplo".</div></div>';
+    wrap.innerHTML='<div class="empty-rich"><div style="font-size:30px">✅</div><div style="font-weight:600">Nenhuma duplicada provável no período</div><div style="font-size:12px;color:var(--t3);margin-top:4px">Se você suspeita de repetições, tente o rigor "Mais amplo".</div></div>';
     return;
   }
   const totalItens=grupos.reduce((s,g)=>s+g.length,0);
   const excedentes=totalItens-grupos.length; // quantos sobram se juntar cada grupo em 1
   const valorExced=grupos.reduce((s,g)=>s+g[0].val*(g.length-1),0);
   if(resumo)resumo.innerHTML=`<div class="card" style="border-left:3px solid var(--com)">
-    <strong>${grupos.length}</strong> grupo(s) de prováveis duplicatas · <strong>${excedentes}</strong> lançamento(s) a mais somando <strong style="color:var(--neg)">${money(valorExced)}</strong> em possível duplicação.
+    <strong>${grupos.length}</strong> grupo(s) de prováveis duplicadas · <strong>${excedentes}</strong> lançamento(s) a mais somando <strong style="color:var(--neg)">${money(valorExced)}</strong> em possível duplicação.
     <div style="font-size:12px;color:var(--t3);margin-top:5px">Revise cada grupo. Escolha qual manter (radio à esquerda) e toque em "Juntar" — os demais serão removidos.</div>
   </div>`;
 
@@ -4134,7 +4273,7 @@ function renderDuplicatas(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div class="ctitle" style="margin:0">Grupo ${gi+1} · ${g.length} lançamentos iguais</div>
         <div style="display:flex;gap:6px">
-          <button class="btn btnsm" onclick="dupIgnora(${gi})" title="Não são duplicatas — esconder este grupo">Não são iguais</button>
+          <button class="btn btnsm" onclick="dupIgnora(${gi})" title="Não são duplicadas — esconder este grupo">Não são iguais</button>
           <button class="btn btnsm btnp" onclick="dupJuntar(${gi})">Juntar (manter 1)</button>
         </div>
       </div>
@@ -4167,7 +4306,7 @@ function atualizaDupManualBar(){
   if(sel.length<1){bar.innerHTML='<div style="font-size:12.5px;color:var(--t3)">Marque 2 ou mais lançamentos que são a mesma coisa para poder juntá-los.</div>';return;}
   const total=sel.reduce((s,e)=>s+e.val,0);
   const valores=[...new Set(sel.map(e=>e.val.toFixed(2)))];
-  const aviso=valores.length>1?'<span style="color:var(--warnt)"> ⚠ valores diferentes — confira se são mesmo duplicatas</span>':'';
+  const aviso=valores.length>1?'<span style="color:var(--warnt)"> ⚠ valores diferentes — confira se são mesmo duplicadas</span>':'';
   bar.innerHTML=`<div class="card" style="border-left:3px solid var(--com);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
     <div style="font-size:13px"><strong>${sel.length}</strong> selecionado(s)${aviso}</div>
     <div style="display:flex;gap:6px">
@@ -4210,7 +4349,7 @@ function dupJuntarManual(){
   if(!confirm('JUNTAR os selecionados?\n\n'+resumo+'\n\nMantém o mais antigo. Esta ação não pode ser desfeita.'))return;
   const ids=new Set(remover.map(e=>e.id));
   S.flux=S.flux.filter(e=>!ids.has(e.id));
-  log('Duplicatas juntadas manualmente: manteve "'+(manter.desc||'')+'" ('+money(manter.val)+'), removeu '+remover.length);
+  log('Duplicadas juntadas manualmente: manteve "'+(manter.desc||'')+'" ('+money(manter.val)+'), removeu '+remover.length);
   DUP_SEL.clear();
   save();renderDupManual();renderFluxo();renderDash();
   toast(remover.length+' lançamento(s) removido(s). Mantido o mais antigo.','ok');
@@ -4233,13 +4372,13 @@ function dupJuntar(gi){
   // não deixa mexer em mês fechado
   const bloq=g.find(e=>mesFechado(e.d));
   if(bloq){toast('Há lançamento em mês fechado neste grupo. Reabra o mês para juntar.','err');return;}
-  const resumo='Manter: '+money(manter.val)+' · '+(manter.desc||'')+' ('+fmt(manter.d)+')\n\nRemover '+remover.length+' duplicata(s):\n'+remover.map(e=>'• '+money(e.val)+' · '+(e.desc||'')+' ('+fmt(e.d)+')'+(e.by?' — '+e.by:'')).join('\n');
-  if(!confirm('JUNTAR DUPLICATAS?\n\n'+resumo+'\n\nEsta ação não pode ser desfeita.'))return;
+  const resumo='Manter: '+money(manter.val)+' · '+(manter.desc||'')+' ('+fmt(manter.d)+')\n\nRemover '+remover.length+' duplicada(s):\n'+remover.map(e=>'• '+money(e.val)+' · '+(e.desc||'')+' ('+fmt(e.d)+')'+(e.by?' — '+e.by:'')).join('\n');
+  if(!confirm('JUNTAR DUPLICADAS?\n\n'+resumo+'\n\nEsta ação não pode ser desfeita.'))return;
   const ids=new Set(remover.map(e=>e.id));
   S.flux=S.flux.filter(e=>!ids.has(e.id));
-  log('Duplicatas juntadas: manteve '+money(manter.val)+' "'+(manter.desc||'')+'", removeu '+remover.length);
+  log('Duplicadas juntadas: manteve '+money(manter.val)+' "'+(manter.desc||'')+'", removeu '+remover.length);
   save();renderDuplicatas();renderFluxo();renderDash();
-  toast(remover.length+' duplicata(s) removida(s). Mantido 1 lançamento.','ok');
+  toast(remover.length+' duplicada(s) removida(s). Mantido 1 lançamento.','ok');
 }
 /* ── exposição global (necessário porque o script é type="module") ── */
 
@@ -4336,8 +4475,33 @@ function sigEstavel(obj){
 }
 /* limpa valores que o Firestore não aceita (undefined) */
 function limpaDoc(o){return JSON.parse(JSON.stringify(o));}
-/* quem pode alterar os cadastros (documento core) */
-function podeGravarCore(){return MIGRANDO||isFull();}
+/* Quem pode alterar os cadastros (documento core).
+   Usa o PAPEL CARIMBADO (custom claim) — a mesma fonte das regras do Firestore.
+   Antes usava o papel do registro, e isso deixava alguém sem claim criar um
+   core vazio, que apagava os cadastros de todo mundo. */
+function podeGravarCore(){return MIGRANDO||EH_GESTAO;}
+/* Este aparelho tem cadastros de verdade? Serve para nunca gravar um core
+   vazio por cima do que já existe (ou impedir a migração criando um core oco). */
+function temCadastrosReais(){
+  return (S.caixas||[]).length>0 || (S.contas||[]).length>0 ||
+         (S.flux||[]).length>0  || (S.users||[]).some(u=>u&&u.email);
+}
+/* Um conjunto de dados está oco? (sem caixas, contas, usuários com e-mail nem lançamentos)
+   Usado para não migrar/gravar nada por cima do que existe. */
+function conteudoOco(d){
+  if(!d)return true;
+  const cx=(d.caixas||[]).length, ct=(d.contas||[]).length;
+  const us=(d.users||[]).filter(u=>u&&u.email).length;
+  const fx=(d.flux||[]).length;
+  return cx===0 && ct===0 && us===0 && fx===0;
+}
+/* O core lido da nuvem está oco? (sinal de que a migração falhou ou foi atropelada) */
+function coreOco(core){
+  if(!core)return true;
+  const cx=(core.caixas||[]).length, ct=(core.contas||[]).length;
+  const us=(core.users||[]).filter(u=>u&&u.email).length;
+  return cx===0 && ct===0 && us===0;
+}
 
 /* ── GRAVA NA NUVEM APENAS O QUE MUDOU ── */
 async function cloudSync(){
@@ -4415,7 +4579,12 @@ function normalizaListas(){
 async function migrarLegado(){
   const antigo=await getDoc(LEGADO_DOC());
   if(!antigo.exists()||!antigo.data().payload)return false;
-  const dados=JSON.parse(antigo.data().payload);
+  let dados;try{dados=JSON.parse(antigo.data().payload);}catch(e){return false;}
+  // O documento antigo pode estar vazio (por exemplo, se já foi atropelado antes).
+  // Migrar um conteúdo vazio apagaria o que existe neste aparelho — então não migramos.
+  if(conteudoOco(dados)){console.warn('Documento antigo sem cadastros: migração ignorada.');return false;}
+  // Se este aparelho tem cadastros e o antigo não tem lançamentos, preferimos o que
+  // já está aqui — o antigo pode ser um resto de uma gravação ruim.
   cloudStatus('Reorganizando os dados…','sync');
   S={...DEF,...dados};
   normalizaListas();
@@ -4538,6 +4707,12 @@ async function entrarComUsuario(user){
 
     // 3) monta a sessão (define CR) e só então grava, se houver o que gravar
     startSession(reg);
+    // Anomalia: o registro diz que é da gestão, mas o papel não está carimbado.
+    // Sem o claim, o Firestore recusa gravar cadastros — avisamos em vez de falhar calado.
+    if(!claimRole&&['gestor','operacional','dona'].includes(reg.role)){
+      cloudStatus('Papel não carimbado — avise o gestor','err');
+      toast('Seu papel ('+reg.role+') ainda não foi confirmado no servidor. Você pode consultar, mas não alterar cadastros. Peça ao gestor para rodar a definição de papéis e entre novamente.','err');
+    }
     if(novoRegistro||adotou||(SEED_PENDING&&CR==='gestor')){SEED_PENDING=false;save();}
     if(novoRegistro&&!claimRole)toast('Primeiro acesso. Seu caixa e permissões precisam ser configurados pelo gestor.','info');
   }catch(e){
@@ -4557,10 +4732,17 @@ async function cloudFirstPull(ehGestao){
       // nuvem ainda sem a nova estrutura
       if(ehGestao){
         const migrou=await migrarLegado();
-        if(!migrou){ // instalação nova e vazia: envia o estado local
-          MIRROR=mirrorLimpo();FB_PULLED=true;MIGRANDO=true;
-          await cloudSync();
-          MIGRANDO=false;
+        if(!migrou){
+          // Não há legado. Só criamos o core se houver algo real neste aparelho —
+          // nunca um core vazio, que bloquearia a migração e esvaziaria o sistema.
+          FB_PULLED=true;
+          if(temCadastrosReais()){
+            MIRROR=mirrorLimpo();MIGRANDO=true;
+            await cloudSync();
+            MIGRANDO=false;
+          }else{
+            cloudStatus('Nuvem vazia — cadastre ou restaure um backup','err');
+          }
         }
       }else{
         FB_PULLED=true; // membro entra antes do gestor: trabalha, mas não cria cadastros
@@ -4571,7 +4753,35 @@ async function cloudFirstPull(ehGestao){
     }
 
     // core existe → carrega cadastros + todas as coleções
-    const core=JSON.parse(coreSnap.data().payload||'{}');
+    let core=JSON.parse(coreSnap.data().payload||'{}');
+
+    // RECUPERAÇÃO: se o core está oco (sem caixas, contas nem usuários) e o
+    // documento antigo ainda guarda os dados, a migração foi atropelada.
+    // Um usuário de gestão refaz a migração e traz tudo de volta.
+    if(ehGestao&&coreOco(core)){
+      // 1ª tentativa: o documento antigo ainda guarda os cadastros?
+      const recuperou=await migrarLegado();
+      if(recuperou){
+        if(document.getElementById('app').style.display!=='none')renderAll();
+        cloudListen();
+        toast('Cadastros recuperados do backup na nuvem.','ok');
+        return;
+      }
+      // 2ª tentativa: a nuvem está vazia, mas ESTE computador ainda tem os cadastros.
+      // Então ele é a cópia boa — enviamos daqui em vez de adotar o vazio.
+      if(temCadastrosReais()){
+        MIRROR=mirrorLimpo();FB_PULLED=true;MIGRANDO=true;
+        await cloudSync();
+        MIGRANDO=false;
+        persistLocal();
+        if(document.getElementById('app').style.display!=='none')renderAll();
+        cloudListen();
+        cloudStatus('Nuvem ✓','ok');
+        toast('A nuvem estava sem cadastros. Enviamos os deste computador.','ok');
+        return;
+      }
+    }
+
     MIRROR=mirrorLimpo();
     MIRROR.core=sigEstavel(core);
     CORE_KEYS.forEach(k=>{if(core[k]!==undefined)S[k]=core[k];});
